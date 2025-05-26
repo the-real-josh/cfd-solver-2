@@ -223,7 +223,6 @@ def mesh(mesh_shape, min_residual=1e-6):
                 k2 = -beta / (2*delta_xi*delta_eta)
                 k3 = gamma / delta_eta**2
 
-
                 new_x_val = (0.5/(k1+k3)) * (k2*x_list[j-1,i-1] + k3*x_list[j-1,i] -k2*x_list[j-1,i+1]+ k1*x_list[j,i-1]+ k1*x_list[j,i+1] -k2*x_list[j+1,i-1] + k3*x_list[j+1,i] + k2*x_list[j+1,i+1])
                 x_list[j,i] = new_x_val
                 iter_residual += abs(x_list[j,i] - new_x_val)

@@ -1,34 +1,49 @@
 #include <iostream> // console messages
 #include <vector> // vectors my beloved
 #include "csv.hpp" // csv reading (how to import??)
+#include "solver.h"
 
-#define arrayD3 std::vector<std::vector<std::vector<float>>> // float array of dimension 3
 
-// define all the mesh stuff here (empty)
-
-arrayD3 get_mesh_data() {
-    // get the data
-    csv::CSVReader reader("data.csv");
-    for (csv::CSVRow& row : reader) {
-        std::string name = row["Name"].get<>();
-        int age = row["Age"].get<int>();
+    // simple state getters
+    float Solution::p(int j, int i) {
+        std::cout << "Pressure getter reporting";
+        return 0.0;
+    }                 
+    float Solution::T(int j, int i) {
+        std::cout << "temperature getter reporting";
+        return 0.0;
+    }                 
+    float Solution::rho(int j, int i) {
+        std::cout << "density getter reporting";
+        return 0.0;
     }
-    // return it as an arrayD3
+    float Solution::e(int j, int i) {
+        std::cout << "specific internal static energy getter reporting";
+        return 0.0;
+    }
+
+
+// internal functions
+float Solution::l(float j, float i) {
+    // returns the length of a cell wall given the wall's index in off-integer notation
+    std::cout << "length function reporting";
+    // convert to wall-coordinates
+    return 0.0;
+    // returns the length of a cell wall  
 }
 
-void allocate() {
-    // pre-allocate
+float Solution::lambda(float j, float i) {
+    // chat I think it should be the vector magnitude of the velocity not the scalar absolute value of the u
+
+    std::cout << "lambda function reporting";
+    // returns the eigenvalue at the cell
+    return 0.0;
 }
 
-void run() {
-    // run the solver
+void Solution::iterate() {
+
 }
 
+void Solution::save() {
 
-int main() {
-    std::cout << "hello cruel world";
-
-    get_mesh_data(); // from csv
-    allocate(); // based on mesh size
-    run();
 }
