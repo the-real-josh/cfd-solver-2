@@ -7,11 +7,14 @@
 // float array of dimension 3: columns of rows of (rho, rho*u, rho*v, rho*E)
 
 using arrayD3 = std::vector<std::vector<std::vector<float>>>;
+using arrayD2 = std::vector<std::vector<float>>;
 
 // header - definitions go here for clarity
 
 // setup.cpp
+arrayD3 create_3d_array(int depth, int rows, int cols);
 arrayD3 get_mesh_data();
+void save_data(arrayD3);
 
 // main.cpp
 class Solution {
@@ -19,9 +22,9 @@ class Solution {
         // variables
         float ag_res;                                       // aggregate residual
 
-        void innit(arrayD3 _mesh_data, float M);                     // take in mesh data and initialize the state
+        void innit(arrayD3 _mesh_data, float M);            // take in mesh data and initialize the state
         void iterate();                                     // do 1 time-step
-        arrayD3 get_q();                                           // return the results
+        arrayD3 get_q();                                    // return the results
 
     private:
         // private data

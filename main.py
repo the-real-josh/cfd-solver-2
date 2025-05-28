@@ -1,7 +1,7 @@
 import subprocess
 import matplotlib.pyplot as plt
 import numpy as np
-
+import pandas as pd
 
 class Mesh:
     def __init__(self, dimensions):
@@ -191,13 +191,26 @@ class Mesh:
         self.x_list = x_list
         self.y_list = y_list
     def ghostify(self):
-        # add ghost cells here
-        pass
+        delta_x = np.average(np.diff(self.x_list[0, :]))
+        delta_y = np.average(np.diff(self.y_list[:, 0].ravel()))
+
+        # append in the top and bottom
+        self.x_list = np.concatenate(([self.x_list[0, :]], [self.x_list[0, :]], self.x_list[:, :], [self.x_list[-1, :]], [self.x_list[-1, :]]), axis=0)
+        self.y_list = np.concatenate(([self.y_list[0, :] - 2*delta_y], [self.y_list[0, :] - delta_y], self.y_list[:, :], [self.y_list[-1, :] + delta_y], [self.y_list[-1, :] + 2*delta_y]), axis=0)
+
+        # append in the left and the right
+        self.x_list = np.concatenate((self.x_list[:, 0:1] - 2*delta_x, self.x_list[:, 0:1] - delta_x, self.x_list[:], self.x_list[:,  -1:] + delta_x, self.x_list[:,  -1:] + 2*delta_x), axis=1)
+        self.y_list = np.concatenate((self.y_list[:, 0:1], self.y_list[:, 0:1], self.y_list[:], self.y_list[:,  -1:], self.y_list[:,  -1:]), axis=1)
+
     def save(self):
-        # save as csv
-        pass
+        df = pd.DataFrame({f'{self.dimensions}-x':self.x_list.ravel(),
+                            f'{self.dimensions}-y':self.y_list.ravel()})
+        df.to_csv()
+
     def read(self):
-        # read from csv
+        df = pd.read_csv('saved_meshes.csv')
+        self.x_list = df[f'{self.dimensions}-x']
+        self.y_list = df[f'{self.dimensions}-y']
         pass
     def plot(self):
         """Pass data in as x_list and y_list as a list of lists in the shape of the mesh"""
@@ -233,12 +246,24 @@ class Mesh:
         self.squishedness = squishedness/(i_ubound*j_ubound)
 
 
-def run():
-    subprocess.call(["build/run.exe"])
+def run(M):
+    # update commands.txt
+    with open('commands.txt', 'w') as f:
+        f.write(f'shape: 3,3\n\
+                mach: {M}\n\
+                iterations: {1}')
+        
+    # maybe later include some stuff about conditions in here
+    
     # call up mr c++
+    subprocess.call(["build/run.exe"])
 
 def results():
     # plot results
+
+    # plot density:
+    
+
     return 0
 
 
@@ -247,11 +272,17 @@ def main():
     machs = [0.5]
     for shape in shapes:
         my_mesh = Mesh(shape)
-        my_mesh.generate(); my_mesh.ghostify(); my_mesh.save()
+        try:
+            my_mesh.read()
+        except:
+            my_mesh.generate()
+            my_mesh.ghostify() 
+            my_mesh.save()
         my_mesh.plot()
-        input(f'complete')
+        input(f'mesh acquisition complete')
         for mach in machs:
             run(mach)
+        results()
 
 if __name__ == "__main__":
     main()

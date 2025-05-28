@@ -3,13 +3,14 @@
 #include "external/csv-parser/include/csv.hpp" // csv reading (how to import??)
 #include "solver.h"
 
+// TODO: rename to solve_engine or something like that
+
 // data inputter
 void Solution::innit(arrayD3 _mesh_data, float M) {
     // take the mesh data in
     mesh_data = _mesh_data;
 
     // fill in the initial state q
-
 
 }
 
@@ -55,16 +56,14 @@ float Solution::D(int j, int i) {
 }
 
 void Solution::boundary_conditions() {
-    std::cout << "boundary condition enforcement function reporting";
+    std::cout << "boundary condition enforcement function reporting\n";
 }
-
-void Solution::iterate() {
-    boundary_conditions();
-
-}
-
 
 arrayD3 Solution::get_q() {
     // data getter
     return q;
+}
+
+void Solution::iterate() {
+    boundary_conditions();
 }
