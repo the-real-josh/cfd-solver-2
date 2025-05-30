@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="Win32-make"
+	BuildStamp="20250530-1710-Experimental"
+	Name="DESKTOP-C0CHQHA"
+	Generator="ctest-4.0.2"
+	CompilerName="C:/msys64/mingw64/bin/c++.exe"
+	CompilerVersion="14.2.0"
+	OSName="Windows"
+	Hostname="DESKTOP-C0CHQHA"
+	OSRelease=" Professional"
+	OSVersion=" (Build 19045)"
+	OSPlatform="AMD64"
+	Is64Bits="1"
+	VendorString="GenuineIntel"
+	VendorID="Intel Corporation"
+	FamilyID="6"
+	ModelID="14"
+	ModelName=""
+	ProcessorCacheSize="-1"
+	NumberOfLogicalCPU="4"
+	NumberOfPhysicalCPU="4"
+	TotalVirtualMemory="30660"
+	TotalPhysicalMemory="16324"
+	LogicalProcessorsPerPhysical="1"
+	ProcessorClockFrequency="3600"
+	>
+	<Testing>
+		<StartDateTime>May 30 12:46 Central Daylight Time</StartDateTime>
+		<StartTestTime>1748627201</StartTestTime>
+		<TestList/>
+		<EndDateTime>May 30 12:46 Central Daylight Time</EndDateTime>
+		<EndTestTime>1748627201</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>

@@ -1,6 +1,6 @@
 #include <iostream> // console messages
 #include <vector> // vectors my beloved
-#include "external/csv-parser/include/csv.hpp" // csv reading (how to import??)
+#include "csv.hpp"
 #include "solver.h"
 
 // setup

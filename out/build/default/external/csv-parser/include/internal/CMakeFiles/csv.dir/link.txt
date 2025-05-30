@@ -1,0 +1,2 @@
+C:/msys64/mingw64/bin/ar.exe qc libcsv.a CMakeFiles/csv.dir/basic_csv_parser.cpp.obj CMakeFiles/csv.dir/col_names.cpp.obj CMakeFiles/csv.dir/csv_format.cpp.obj CMakeFiles/csv.dir/csv_reader.cpp.obj CMakeFiles/csv.dir/csv_reader_iterator.cpp.obj CMakeFiles/csv.dir/csv_row.cpp.obj CMakeFiles/csv.dir/csv_row_json.cpp.obj CMakeFiles/csv.dir/csv_stat.cpp.obj CMakeFiles/csv.dir/csv_utility.cpp.obj
+C:/msys64/mingw64/bin/ranlib.exe libcsv.a
