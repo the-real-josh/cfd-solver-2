@@ -1,6 +1,5 @@
 #ifndef SOLVER_H
 #define SOLVER_H
-
 #include <vector>
 
 // float array of dimension 3 columns of rows of (x,y)

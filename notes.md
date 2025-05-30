@@ -11,6 +11,8 @@ overall structure:
  - modularization
  - structures: equivalent of tuple? has to be declared ahead of time?
 
+makefile is run with make.exe via command prompt. get make.exe with minGW
+https://medium.com/@samsorrahman/how-to-run-a-makefile-in-windows-b4d115d7c516
 
 # help
 
