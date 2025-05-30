@@ -63,11 +63,11 @@ CMAKE_BINARY_DIR = C:/Users/j-min/Documents/GitHub/cfd-solver-2/out/build/defaul
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/run.dir/all
+all: CMakeFiles/solver_engine.dir/all
 .PHONY : all
 
 # The main recursive "codegen" target.
-codegen: CMakeFiles/run.dir/codegen
+codegen: CMakeFiles/solver_engine.dir/codegen
 .PHONY : codegen
 
 # The main recursive "preinstall" target.
@@ -103,7 +103,7 @@ clean: CMakeFiles/ContinuousTest.dir/clean
 clean: CMakeFiles/ContinuousCoverage.dir/clean
 clean: CMakeFiles/ContinuousMemCheck.dir/clean
 clean: CMakeFiles/ContinuousSubmit.dir/clean
-clean: CMakeFiles/run.dir/clean
+clean: CMakeFiles/solver_engine.dir/clean
 .PHONY : clean
 
 #=============================================================================
@@ -1003,36 +1003,36 @@ CMakeFiles/ContinuousSubmit.dir/clean:
 .PHONY : CMakeFiles/ContinuousSubmit.dir/clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/run.dir
+# Target rules for target CMakeFiles/solver_engine.dir
 
 # All Build rule for target.
-CMakeFiles/run.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=C:/Users/j-min/Documents/GitHub/cfd-solver-2/out/build/default/CMakeFiles --progress-num=1,2,3,4 "Built target run"
-.PHONY : CMakeFiles/run.dir/all
+CMakeFiles/solver_engine.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/solver_engine.dir/build.make CMakeFiles/solver_engine.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/solver_engine.dir/build.make CMakeFiles/solver_engine.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=C:/Users/j-min/Documents/GitHub/cfd-solver-2/out/build/default/CMakeFiles --progress-num=1,2,3,4 "Built target solver_engine"
+.PHONY : CMakeFiles/solver_engine.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/run.dir/rule: cmake_check_build_system
+CMakeFiles/solver_engine.dir/rule: cmake_check_build_system
 	$(CMAKE_COMMAND) -E cmake_progress_start C:/Users/j-min/Documents/GitHub/cfd-solver-2/out/build/default/CMakeFiles 4
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/run.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/solver_engine.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start C:/Users/j-min/Documents/GitHub/cfd-solver-2/out/build/default/CMakeFiles 0
-.PHONY : CMakeFiles/run.dir/rule
+.PHONY : CMakeFiles/solver_engine.dir/rule
 
 # Convenience name for target.
-run: CMakeFiles/run.dir/rule
-.PHONY : run
+solver_engine: CMakeFiles/solver_engine.dir/rule
+.PHONY : solver_engine
 
 # codegen rule for target.
-CMakeFiles/run.dir/codegen:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=C:/Users/j-min/Documents/GitHub/cfd-solver-2/out/build/default/CMakeFiles --progress-num=1,2,3,4 "Finished codegen for target run"
-.PHONY : CMakeFiles/run.dir/codegen
+CMakeFiles/solver_engine.dir/codegen:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/solver_engine.dir/build.make CMakeFiles/solver_engine.dir/codegen
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=C:/Users/j-min/Documents/GitHub/cfd-solver-2/out/build/default/CMakeFiles --progress-num=1,2,3,4 "Finished codegen for target solver_engine"
+.PHONY : CMakeFiles/solver_engine.dir/codegen
 
 # clean rule for target.
-CMakeFiles/run.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/run.dir/build.make CMakeFiles/run.dir/clean
-.PHONY : CMakeFiles/run.dir/clean
+CMakeFiles/solver_engine.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/solver_engine.dir/build.make CMakeFiles/solver_engine.dir/clean
+.PHONY : CMakeFiles/solver_engine.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

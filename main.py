@@ -266,7 +266,6 @@ def results():
 
     return 0
 
-
 def main():
     shapes = [(11, 21)]
     machs = [0.5]

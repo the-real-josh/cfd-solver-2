@@ -14,20 +14,8 @@
 # EXTERNAL cache entries
 ########################
 
-//Build Python Binding
-BUILD_PYTHON:BOOL=OFF
-
 //Build the testing tree.
 BUILD_TESTING:BOOL=ON
-
-//Value Computed by CMake
-CFD_solver_2_BINARY_DIR:STATIC=C:/Users/j-min/Documents/GitHub/cfd-solver-2/out/build/default
-
-//Value Computed by CMake
-CFD_solver_2_IS_TOP_LEVEL:STATIC=ON
-
-//Value Computed by CMake
-CFD_solver_2_SOURCE_DIR:STATIC=C:/Users/j-min/Documents/GitHub/cfd-solver-2
 
 //Path to a program.
 CMAKE_ADDR2LINE:FILEPATH=C:/msys64/mingw64/bin/addr2line.exe
@@ -172,7 +160,7 @@ CMAKE_PROJECT_DESCRIPTION:STATIC=
 CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=CFD_solver_2
+CMAKE_PROJECT_NAME:STATIC=solver_engine
 
 //Path to a program.
 CMAKE_RANLIB:FILEPATH=C:/msys64/mingw64/bin/ranlib.exe
@@ -264,9 +252,6 @@ COVERAGE_COMMAND:FILEPATH=C:/msys64/mingw64/bin/gcov.exe
 //Extra command line flags to pass to the coverage tool
 COVERAGE_EXTRA_FLAGS:STRING=-l
 
-//Allow to disable building of programs
-CSV_BUILD_PROGRAMS:BOOL=ON
-
 //How many times to retry timed-out CTest submissions.
 CTEST_SUBMIT_RETRY_COUNT:STRING=3
 
@@ -292,13 +277,13 @@ MEMORYCHECK_SUPPRESSIONS_FILE:FILEPATH=
 SITE:STRING=DESKTOP-C0CHQHA
 
 //Value Computed by CMake
-csv_BINARY_DIR:STATIC=C:/Users/j-min/Documents/GitHub/cfd-solver-2/out/build/default/external/csv-parser
+solver_engine_BINARY_DIR:STATIC=C:/Users/j-min/Documents/GitHub/cfd-solver-2/out/build/default
 
 //Value Computed by CMake
-csv_IS_TOP_LEVEL:STATIC=OFF
+solver_engine_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
-csv_SOURCE_DIR:STATIC=C:/Users/j-min/Documents/GitHub/cfd-solver-2/external/csv-parser
+solver_engine_SOURCE_DIR:STATIC=C:/Users/j-min/Documents/GitHub/cfd-solver-2
 
 
 ########################
@@ -391,8 +376,6 @@ CMAKE_GENERATOR_INSTANCE:INTERNAL=
 CMAKE_GENERATOR_PLATFORM:INTERNAL=
 //Name of generator toolset.
 CMAKE_GENERATOR_TOOLSET:INTERNAL=
-//Test CMAKE_HAVE_LIBC_PTHREAD
-CMAKE_HAVE_LIBC_PTHREAD:INTERNAL=1
 //Source directory with the top level CMakeLists.txt file for this
 // project
 CMAKE_HOME_DIRECTORY:INTERNAL=C:/Users/j-min/Documents/GitHub/cfd-solver-2
