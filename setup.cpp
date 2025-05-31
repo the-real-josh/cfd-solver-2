@@ -1,15 +1,23 @@
 #include <iostream> // console messages
 #include <vector> // vectors my beloved
-#include "csv.hpp"
+#include "csv.hpp" // do not need paths because that is taken care of in the includepaths in cmake
 #include "solver.h"
 
+// official declaration goes here.
+float t_infty; // kelvin
+float p_infty; // pascals
+float mach;
+std::string filename;
 
 // setup
-arrayD3 create_3d_array(int depth, int rows, int cols) {
-    return arrayD3(depth, std::vector<std::vector<float>>(rows, std::vector<float>(cols, 0.0f)));
+void get_config() {
+    // get these guys based on a config file later
+    t_infty = 300.0f;
+    p_infty = 101325.0f;
+    mach = 0.3f;
+    filename = "test.csv";
 }
 
-// something is bad here.
 arrayD3 get_mesh_data() {
     std::cout << "mesh data gettter reporting\n";
 
@@ -19,42 +27,23 @@ arrayD3 get_mesh_data() {
     int j_max {3};
 
     // get the data
-    arrayD2 flat_mesh_data(2);
-    //arrayD3 mesh_data = create_3d_array(dimensions[0], dimensions[1], 4);
+    arrayD2 flat_mesh_data;
 
-    // read csv
-   /* csv::CSVReader reader("test.csv");
-    for (auto& row: reader) {
-        // Note: Can also use index of column with [] operator
-        flat_mesh_data[0].push_back(row["x"].get<float>());
-        flat_mesh_data[1].push_back(row["y"].get<float>());
-    }
-
-    for (const auto& i : flat_mesh_data[0]) {
-        std::cout << i << " ";
-    }
-    for (const auto& i : flat_mesh_data[1]) {
-        std::cout << i << " ";
-    }
-    std::cout << "\n";
-    
-    trying to rework dimensionality here*/
-
-    // read csv
+    // read csv in flat-paired form
     csv::CSVReader reader("test.csv");
     for (auto& row: reader) {
         // Note: Can also use index of column with [] operator
-        flat_mesh_data.push_back({row["x"].get<float>()});
+        flat_mesh_data.push_back({row["x"].get<float>(), row["y"].get<float>()});
     }
 
-    for (const auto& pair: flat_mesh_data) {
-        for (const auto& xy: pair) {
-            std::cout << xy << " "; 
-        }
-    }
-    std::cout << "\n";
-    
-    
+    // // debug print
+    // for (const auto& pair: flat_mesh_data) {
+    //     for (const auto& xy: pair) {
+    //         std::cout << xy << " "; 
+    //     }
+    //     std::cout << " -- ";
+    // }
+    // std::cout << "\n";
     
     
     // reshape into proper dimensions
@@ -63,8 +52,8 @@ arrayD3 get_mesh_data() {
     arrayD3 mesh_data;
 
     // assert that the given dimensions match the data
-    std::cout << "mesh data size" << flat_mesh_data.size() << "\n";
-    std::cout << "mesh integer division" << flat_mesh_data.size() % i_max << "\n";
+    std::cout << "mesh data size: " << flat_mesh_data.size() << "\n";
+    std::cout << "mesh integer division: " << flat_mesh_data.size() % i_max << "\n";
 
     //if(i_max == 0 || flat_mesh_data.size()%i_max != 0 ) throw std::domain_error( "bad #cols" ) ;
 
@@ -77,29 +66,53 @@ arrayD3 get_mesh_data() {
         );
     }
 
-
-    // print out the mesh_data to see if it is good
-    for (const auto& row : mesh_data) {
-        for (const auto& pair: row) {
-            for (const auto& xy: pair) {
-                std::cout << xy;
-            }
-            std::cout << " ";
-        }
-        std::cout << "\n";
-    }
-
-
+    // // print out the mesh_data to see if it is good
+    // for (const auto& row : mesh_data) {
+    //     for (const auto& pair: row) {
+    //         for (const auto& xy: pair) {
+    //             std::cout << xy;
+    //         }
+    //         std::cout << " ";
+    //     }
+    //     std::cout << "\n";
+    // }
 
     // return it as an arrayD3
     return mesh_data;
-
-    
 }
 
 
-// save the data
-void save_data(arrayD3) {
-    // SOMEHOW save the data
+void save_data(arrayD3 q_out) {
+    /* save the data
+       saving format: 4 columns for each of the state variables */
+
+    // flatten the cells
+    std::vector<float> flat_rho;
+    std::vector<float> flat_rho_u;
+    std::vector<float> flat_rho_v;
+    std::vector<float> flat_rho_E;
+    
+    for (int j = 0; j<q_out.size(); j++) {
+        for (int i = 0; i< q_out[0].size(); i++) {
+            flat_rho.push_back(q_out[j][i][0]);
+            flat_rho_u.push_back(q_out[j][i][1]);
+            flat_rho_v.push_back(q_out[j][i][2]);
+            flat_rho_E.push_back(q_out[j][i][3]);
+        }
+    }
+    
+    
+    // write to the output file
+    std::ofstream file("output.csv");
+    auto writer = csv::make_csv_writer(file);
+    writer << std::vector<std::string>({"rho", "rho_u", "rho_v", "rho_E"});
+    for (int i = 0; i<flat_rho.size(); i++) {
+        writer << std::vector<std::string>({std::to_string(flat_rho[i]),
+             std::to_string(flat_rho_u[i]),
+             std::to_string(flat_rho_v[i]),
+             std::to_string(flat_rho_E[i])
+            });  
+    }
+
 }
 

@@ -2,18 +2,47 @@
 #include <vector> // vectors my beloved
 #include "csv.hpp"
 #include "solver.h"
-
+#include <cmath>
 // TODO: rename to solve_engine or something like that
 
 // data inputter
-void Solution::innit(arrayD3 _mesh_data, float M) {
+void Solution::innit(arrayD3 _mesh_data) {
+    /*there is a bug in here that is making the code put the wrong amount of states per cell*/
+
+    std::cout << "innit\n";
+
     // take the mesh data in
     mesh_data = _mesh_data;
-    I_max = mesh_data[0].size();
-    J_max = mesh_data.size();
+    i_max = mesh_data[0].size() - 1; // indeces are one minus the size (ie, size 3 has maximum index of 2)
+    j_max = mesh_data.size() - 1;
 
+    std::cout << "jmax, imax = " << j_max << "," << i_max;
+
+    q.resize(j_max);
     // fill in the initial state q
+    for (int j = 0; j<=j_max-1; j++) { 
+        q[j].resize(i_max);
+        for (int i = 0; i<=i_max-1; i++) {
+                std::cout << "current index (j,i) = " << j << "," << i << "\n";
+                q[j][i] = std::vector<float>{
+                    static_cast<float>(p_infty / (R * t_infty)), // solve for density
+                    0.0f,
+                    static_cast<float>((p_infty / (R * t_infty)) * (mach * sqrt(1.4*R*t_infty))),
+                    static_cast<float>(0.5*pow(mach * sqrt(1.4*R*t_infty), 2) + (cv*t_infty))
+                };
+        }
+    }
 
+    // print out the mesh_data to see if it is good
+    for (const auto& row : q) {
+        for (const auto& state: row) {
+            // for (const auto& xy: pair) {
+            //     std::cout << xy;
+            // }
+            std::cout << state[0] << " ";
+        }
+        std::cout << "\n";
+    }
 }
 
 // simple state getters
@@ -92,11 +121,15 @@ arrayD3 Solution::get_q() {
 
 void Solution::iterate() {
     /* conduct one iteration*/
+    std::cout << "Iterate\n";
+
+    /*
     boundary_conditions();
-    for (int j = 0; j<J_max; j++) {
-        for (int i = 0; i<I_max; i++) {
+    for (int j = 0; j<j_max; j++) {
+        for (int i = 0; i<i_max; i++) {
 
         }
     }
+    */
 
 }

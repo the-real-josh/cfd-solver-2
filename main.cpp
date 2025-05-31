@@ -2,20 +2,25 @@
 #include "solver.h"
 
 
-// define inlet state in public namespace
-float t_infty = 300; // kelvin
-float p_infty = 101325; // pascals
-
 
 int main() {
     std::cout << "main reporting\n";
-    
-     // from csv; should come in with ghost cells pre-appended
+
+    // get solver configuration (from python)
+    get_config();
+
+     // initialize the solver
     arrayD3 mesh_data = get_mesh_data();
-
     Solution sol;
-    sol.innit(mesh_data, 0.3);
-    sol.iterate();
+    sol.innit(mesh_data);
 
+    // run the solver
+    for (int i = 0; i<=3; i++) {
+        sol.iterate();
+    }
+
+    // save results
     save_data(sol.get_q());
+
+    std::cout << "Process finished with exit code 0";
 }

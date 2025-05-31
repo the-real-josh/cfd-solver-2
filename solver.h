@@ -2,26 +2,39 @@
 #define SOLVER_H
 #include <vector>
 
+// macros
+
 // float array of dimension 3 columns of rows of (x,y)
 // float array of dimension 3: columns of rows of (rho, rho*u, rho*v, rho*E)
-
 using arrayD3 = std::vector<std::vector<std::vector<float>>>;
 using arrayD2 = std::vector<std::vector<float>>;
 
+#define R 287.052
+#define pi 3.1415
+#define gamma 1.4
+#define cp (gamma*R/(gamma-1))
+#define cv (cp-R)
 // header - definitions go here for clarity
 
 // setup.cpp
-arrayD3 create_3d_array(int depth, int rows, int cols);
+void get_config();
 arrayD3 get_mesh_data();
 void save_data(arrayD3);
 
-// main.cpp
+// can't declare variables here, or else it appears in all the files, leading to a conflict.
+// extern is supposed to fix this definition/declaration confusion?
+extern float t_infty; // kelvin
+extern float p_infty; // pascals
+extern float mach;
+extern std::string filename;
+
+// solver.cpp
 class Solution {
     public:
         // variables
         float ag_res;                                       // aggregate residual
 
-        void innit(arrayD3 _mesh_data, float M);            // take in mesh data and initialize the state
+        void innit(arrayD3 _mesh_data);            // take in mesh data and initialize the state
         void iterate();                                     // do 1 time-step
         arrayD3 get_q();                                    // return the results
 
@@ -34,8 +47,8 @@ class Solution {
 
         void boundary_conditions();               // enforce boundary conditions
 
-        int I_max;
-        int J_max;
+        int i_max;
+        int j_max;
 
         // simple state getters
         float p(int j, int i);                  // get pressure at a cell
