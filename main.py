@@ -2,6 +2,7 @@ import subprocess
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import os
 
 class Mesh:
     def __init__(self, dimensions):
@@ -202,16 +203,17 @@ class Mesh:
         self.x_list = np.concatenate((self.x_list[:, 0:1] - 2*delta_x, self.x_list[:, 0:1] - delta_x, self.x_list[:], self.x_list[:,  -1:] + delta_x, self.x_list[:,  -1:] + 2*delta_x), axis=1)
         self.y_list = np.concatenate((self.y_list[:, 0:1], self.y_list[:, 0:1], self.y_list[:], self.y_list[:,  -1:], self.y_list[:,  -1:]), axis=1)
 
-    def save(self):
-        df = pd.DataFrame({f'{self.dimensions}-x':self.x_list.ravel(),
-                            f'{self.dimensions}-y':self.y_list.ravel()})
-        df.to_csv()
+    def save(self, fname):
+        df = pd.DataFrame({f'x':self.x_list.ravel(),
+                            f'y':self.y_list.ravel()})
+        df.to_csv(fname)
+        print(f'New Mesh saved to {os.path.join(os.getcwd(), fname)}')
 
-    def read(self):
-        df = pd.read_csv('saved_meshes.csv')
-        self.x_list = df[f'{self.dimensions}-x']
-        self.y_list = df[f'{self.dimensions}-y']
-        pass
+    def read(self, fname):
+        df = pd.read_csv(fname)
+        self.x_list = df[f'x']
+        self.y_list = df[f'y']
+        print(f'Mesh read from {os.path.join(os.getcwd(), fname)}')
     def plot(self):
         """Pass data in as x_list and y_list as a list of lists in the shape of the mesh"""
         # fancy plot with skewness
@@ -246,42 +248,70 @@ class Mesh:
         self.squishedness = squishedness/(i_ubound*j_ubound)
 
 
-def run(M):
+def run(shape=None, mach=None, mesh_fname=None, results_fname=None):
+    """Edit a configuration file (commands.txt) and then call the solver."""
+
+    # other givens required to fix the state
+    T_infty = 300.0
+    p_infty = 101325.0
+
     # update commands.txt
     with open('commands.txt', 'w') as f:
-        f.write(f'shape: 3,3\n\
-                mach: {M}\n\
-                iterations: {1}')
-        
-    # maybe later include some stuff about conditions in here
-    
+        f.write(f'i_max: {shape[0]}\n\
+                j_max: {shape[1]}\n\
+                t_infty: {T_infty}\n\
+                p_infty: {p_infty}\n\
+                mach_infty: {mach}\n\
+                mesh_fname: {mesh_fname}\n\
+                results_fname: {results_fname}')
+            
     # call up mr c++
-    subprocess.call(["build/run.exe"])
+    subprocess.call(["out/build/default/solver_engine.exe"])
 
-def results():
+def plot_results(fname='test.csv'):
     # plot results
-
-    # plot density:
+    fig, ax = plt.subplots()
     
+    # plot density with a countourf and colorbar scale
+    # https://www.geeksforgeeks.org/matplotlib-pyplot-contourf-in-python/
+
+    # plot velocities with a quiver
+    # https://matplotlib.org/stable/gallery/images_contours_and_fields/quiver_simple_demo.html#sphx-glr-gallery-images-contours-and-fields-quiver-simple-demo-py
+
+    # plot energy same as density
 
     return 0
 
+
+
 def main():
+    # generate mesh
     shapes = [(11, 21)]
     machs = [0.5]
     for shape in shapes:
+
+        # mesh file name
+        mesh_fname = f'mesh sh={shape[0]}x{shape[1]}.csv'
+
+        # generate mesh
         my_mesh = Mesh(shape)
         try:
-            my_mesh.read()
-        except:
+            my_mesh.read(mesh_fname)
+        except FileNotFoundError:
             my_mesh.generate()
             my_mesh.ghostify() 
-            my_mesh.save()
+            my_mesh.save(mesh_fname)
         my_mesh.plot()
-        input(f'mesh acquisition complete')
+        input(f'Mesh acquisition complete. Press enter to continue')
+
+        # run solver
         for mach in machs:
-            run(mach)
-        results()
+            results_fname = lambda mach, dimensions: f'results sh={dimensions[0]}x{dimensions[1]} M={mach}.csv'
+
+            run(shape, mach, results_fname)
+        
+            # view results
+            plot_results()
 
 if __name__ == "__main__":
-    main()
+    plot_results()

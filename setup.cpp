@@ -3,19 +3,25 @@
 #include "csv.hpp" // do not need paths because that is taken care of in the includepaths in cmake
 #include "solver.h"
 
-// official declaration goes here.
+// official declaration of config globals goes here.
+int i_max;
+int j_max;
 float t_infty; // kelvin
 float p_infty; // pascals
-float mach;
-std::string filename;
+float mach_infty;
+std::string mesh_fname;
+std::string res_fname;
 
 // setup
 void get_config() {
     // get these guys based on a config file later
+    i_max = 3;
+    j_max = 3;
     t_infty = 300.0f;
     p_infty = 101325.0f;
-    mach = 0.3f;
-    filename = "test.csv";
+    mach_infty = 0.3f;
+    mesh_fname = "test.csv";
+    res_fname = "output.csv";
 }
 
 arrayD3 get_mesh_data() {
@@ -23,8 +29,6 @@ arrayD3 get_mesh_data() {
 
     // TODO: find out the dimensions from config file or cin
     // np.size-like. ie, an array {1, 1, 1} has n_cols of 3 and n_rows of 0
-    int i_max {3}; 
-    int j_max {3};
 
     // get the data
     arrayD2 flat_mesh_data;
@@ -103,7 +107,7 @@ void save_data(arrayD3 q_out) {
     
     
     // write to the output file
-    std::ofstream file("output.csv");
+    std::ofstream file(res_fname);
     auto writer = csv::make_csv_writer(file);
     writer << std::vector<std::string>({"rho", "rho_u", "rho_v", "rho_E"});
     for (int i = 0; i<flat_rho.size(); i++) {
