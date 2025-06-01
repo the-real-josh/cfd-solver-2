@@ -1,0 +1,7 @@
+i_max: 11
+                j_max: 21
+                t_infty: 300.0
+                p_infty: 101325.0
+                mach_infty: 0.5
+                mesh_fname: results sh=11x21 M=0.5.csv
+                results_fname: None

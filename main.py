@@ -272,6 +272,7 @@ def run(shape=None, mach=None, mesh_fname=None, results_fname=None):
     # call up mr c++
     subprocess.call(["out/build/default/solver_engine.exe"])
 
+
 def plot_results(mesh_fname=None, results_fname=None, verbose=True):
     """
     Plots solver results
@@ -283,7 +284,7 @@ def plot_results(mesh_fname=None, results_fname=None, verbose=True):
     """
 
     # get mesh
-    mesh_dimensions = 3,3 #     TODO: get the mesh dimension from fname or through args
+    mesh_dimensions = 11,21 #     TODO: get the mesh dimension from fname or through args
     curr_mesh = Mesh(mesh_dimensions)
     curr_mesh.read(mesh_fname)
     x = curr_mesh.x_list
@@ -310,6 +311,7 @@ def plot_results(mesh_fname=None, results_fname=None, verbose=True):
     plt.show()
 
     # extract results
+    results_fname='output.csv' # overridden - TODO: get c++ to read from the config file, then fix
     df = pd.read_csv(results_fname)
     rho = df['rho'].to_numpy().reshape(data_dimensions)
     u = np.divide(df['rho_u'].to_numpy().reshape(data_dimensions), rho)
@@ -317,6 +319,7 @@ def plot_results(mesh_fname=None, results_fname=None, verbose=True):
     E = np.divide(df['rho_E'].to_numpy().reshape(data_dimensions), rho)
 
     # plot density
+    # BUG - output.csv is not updating
     mesh_plot(x,y)
     z = np.ma.masked_where(rho <= 0, rho)
     cs = plt.contourf(x_cell_centers, y_cell_centers, z,
@@ -354,8 +357,10 @@ def main():
             my_mesh.read(mesh_fname)
         except FileNotFoundError:
             my_mesh.generate()
-            my_mesh.ghostify() 
             my_mesh.save(mesh_fname)
+            my_mesh.plot()
+
+        my_mesh.ghostify()
         my_mesh.plot()
         input(f'Mesh acquisition complete. Press enter to continue')
 
@@ -373,9 +378,7 @@ def test_main():
     mach=0.3
     mesh_fname = f'mesh sh={shape[0]}x{shape[1]}.csv'
     results_fname = f'results sh={shape[0]}x{shape[1]} M={mach}.csv'
-
-
     plot_results('test.csv', 'output.csv')
 
 if __name__ == "__main__":
-    test_main()
+    main()

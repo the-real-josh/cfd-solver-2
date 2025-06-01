@@ -20,7 +20,7 @@ void get_config() {
     t_infty = 300.0f;
     p_infty = 101325.0f;
     mach_infty = 0.3f;
-    mesh_fname = "test.csv";
+    mesh_fname = "mesh sh=11x21.csv";
     res_fname = "output.csv";
 }
 
