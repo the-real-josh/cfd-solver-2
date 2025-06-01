@@ -1,4 +1,5 @@
 import subprocess
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -211,42 +212,45 @@ class Mesh:
 
     def read(self, fname):
         df = pd.read_csv(fname)
-        self.x_list = df[f'x']
-        self.y_list = df[f'y']
+        self.x_list = df[f'x'].to_numpy().reshape(self.dimensions)
+        self.y_list = df[f'y'].to_numpy().reshape(self.dimensions)
         print(f'Mesh read from {os.path.join(os.getcwd(), fname)}')
     def plot(self):
         """Pass data in as x_list and y_list as a list of lists in the shape of the mesh"""
-        # fancy plot with skewness
-        squishedness = 0
-        n = 0
-        i_ubound = len(self.x_list)
-        j_ubound = len(self.x_list[0])
-        for i in range(i_ubound):
-            for j in range(j_ubound):
-                try:
-                    if (i==i_ubound and j==j_ubound) or (i==i_ubound-1 and j==j_ubound-1):
-                        pass
-                    elif j==j_ubound-1:
-                        plt.plot((self.x_list[i, j], self.x_list[i+1, j]), (self.y_list[i, j], self.y_list[i+1, j]), color='black')
-                    elif i==i_ubound-1:
-                        plt.plot((self.x_list[i, j], self.x_list[i, j+1]), (self.y_list[i, j], self.y_list[i, j+1]), color='black')
-                    else:
-                        plt.plot((self.x_list[i, j], self.x_list[i+1, j]), (self.y_list[i, j], self.y_list[i+1, j]), color='black')
-                        plt.plot((self.x_list[i, j], self.x_list[i, j+1]), (self.y_list[i, j], self.y_list[i, j+1]), color='black')
-                        horiz = np.array([self.x_list[i+1, j], self.y_list[i+1, j]]) - np.array([self.x_list[i, j], self.y_list[i, j]])
-                        vert = np.array([self.x_list[i, j+1], self.y_list[i, j+1]]) - np.array([self.x_list[i, j], self.y_list[i, j]])
-                        if not 0:
-                            squishedness += np.abs(np.dot(horiz, vert) / (np.linalg.norm(horiz)*np.linalg.norm(vert)))
-                            n += 1
-                except IndexError:
-                    print(f'grapher - index error @ji={j,i} for shape of {np.shape(self.x_list)}')
-                    pass
-        plt.title(f'mesh: {self.dimensions}')
-        plt.scatter((2, 2, 3, 3), (0, 1, 0, 1))
-        plt.axis('equal')
+        self.squishedness = mesh_plot(self.x_list, self.y_list)
         plt.show()
-        self.squishedness = squishedness/(i_ubound*j_ubound)
 
+# TODO: remove duplicated code
+def mesh_plot(x_list, y_list, title='Mesh'):
+    """Pass data in as x_list and y_list as a list of lists in the shape of the mesh"""
+        # fancy plot with skewness
+    squishedness = 0
+    n = 0
+    i_ubound = len(x_list)
+    j_ubound = len(x_list[0])
+    for i in range(i_ubound):
+        for j in range(j_ubound):
+            try:
+                if (i==i_ubound and j==j_ubound) or (i==i_ubound-1 and j==j_ubound-1):
+                    pass
+                elif j==j_ubound-1:
+                    plt.plot((x_list[i, j], x_list[i+1, j]), (y_list[i, j], y_list[i+1, j]), color='black')
+                elif i==i_ubound-1:
+                    plt.plot((x_list[i, j], x_list[i, j+1]), (y_list[i, j], y_list[i, j+1]), color='black')
+                else:
+                    plt.plot((x_list[i, j], x_list[i+1, j]), (y_list[i, j], y_list[i+1, j]), color='black')
+                    plt.plot((x_list[i, j], x_list[i, j+1]), (y_list[i, j], y_list[i, j+1]), color='black')
+                    horiz = np.array([x_list[i+1, j], y_list[i+1, j]]) - np.array([x_list[i, j], y_list[i, j]])
+                    vert = np.array([x_list[i, j+1], y_list[i, j+1]]) - np.array([x_list[i, j], y_list[i, j]])
+                    if not 0:
+                        squishedness += np.abs(np.dot(horiz, vert) / (np.linalg.norm(horiz)*np.linalg.norm(vert)))
+                        n += 1
+            except IndexError:
+                print(f'grapher - index error @ji={j,i} for shape of {np.shape(x_list)}')
+                pass
+    plt.title(title)
+    plt.axis('equal')
+    return squishedness/(i_ubound*j_ubound)
 
 def run(shape=None, mach=None, mesh_fname=None, results_fname=None):
     """Edit a configuration file (commands.txt) and then call the solver."""
@@ -268,18 +272,69 @@ def run(shape=None, mach=None, mesh_fname=None, results_fname=None):
     # call up mr c++
     subprocess.call(["out/build/default/solver_engine.exe"])
 
-def plot_results(fname='test.csv'):
-    # plot results
-    fig, ax = plt.subplots()
+def plot_results(mesh_fname=None, results_fname=None, verbose=True):
+    """
+    Plots solver results
+        plots density and energy with a countourf and colorbar scale
+        docs: https://www.geeksforgeeks.org/matplotlib-pyplot-contourf-in-python/
+
+        plots velocities with a quiver
+        docs: https://matplotlib.org/stable/gallery/images_contours_and_fields/quiver_simple_demo.html#sphx-glr-gallery-images-contours-and-fields-quiver-simple-demo-py
+    """
+
+    # get mesh
+    mesh_dimensions = 3,3 #     TODO: get the mesh dimension from fname or through args
+    curr_mesh = Mesh(mesh_dimensions)
+    curr_mesh.read(mesh_fname)
+    x = curr_mesh.x_list
+    y = curr_mesh.y_list
+
+    # calculate centers
+    data_dimensions = [k-1 for k in mesh_dimensions] # cells have maximum indeces one less
+    x_cell_centers = np.zeros(data_dimensions)
+    y_cell_centers = np.zeros_like(x_cell_centers)
+    for j in range(data_dimensions[0]):
+        for i in range(data_dimensions[1]):
+            x_cell_centers[j,i] = np.mean(np.array([x[j,i],
+                                                    x[j+1,i],
+                                                    x[j,i+1],
+                                                    x[j+1,i+1]]))
+            y_cell_centers[j,i] = np.mean(np.array([y[j,i],
+                                                y[j+1,i],
+                                                y[j,i+1],
+                                                y[j+1,i+1]]))
+            
+    # test plot with no cfd data
+    plt.scatter(x_cell_centers, y_cell_centers)
+    mesh_plot(x,y)
+    plt.show()
+
+    # extract results
+    df = pd.read_csv(results_fname)
+    rho = df['rho'].to_numpy().reshape(data_dimensions)
+    u = np.divide(df['rho_u'].to_numpy().reshape(data_dimensions), rho)
+    v = np.divide(df['rho_v'].to_numpy().reshape(data_dimensions), rho)
+    E = np.divide(df['rho_E'].to_numpy().reshape(data_dimensions), rho)
+
+    # plot density
+    mesh_plot(x,y)
+    z = np.ma.masked_where(rho <= 0, rho)
+    cs = plt.contourf(x_cell_centers, y_cell_centers, z,
+                      locator=matplotlib.ticker.LogLocator(),
+                      cmap="bone")
+    cbar = plt.colorbar(cs)
+    plt.title("density contour plot attempt")
     
-    # plot density with a countourf and colorbar scale
-    # https://www.geeksforgeeks.org/matplotlib-pyplot-contourf-in-python/
+    if verbose:
+        plt.show()
+    else:
+        plt.savefig(mesh_fname + "density")
+        plt.clf()
 
-    # plot velocities with a quiver
-    # https://matplotlib.org/stable/gallery/images_contours_and_fields/quiver_simple_demo.html#sphx-glr-gallery-images-contours-and-fields-quiver-simple-demo-py
 
-    # plot energy same as density
-
+    # end
+    del df
+    plt.close()
     return 0
 
 
@@ -306,12 +361,21 @@ def main():
 
         # run solver
         for mach in machs:
-            results_fname = lambda mach, dimensions: f'results sh={dimensions[0]}x{dimensions[1]} M={mach}.csv'
+            results_fname = f'results sh={shape[0]}x{shape[1]} M={mach}.csv'
 
             run(shape, mach, results_fname)
         
             # view results
-            plot_results()
+            plot_results(mesh_fname, results_fname)
+
+def test_main():
+    shape=3,3
+    mach=0.3
+    mesh_fname = f'mesh sh={shape[0]}x{shape[1]}.csv'
+    results_fname = f'results sh={shape[0]}x{shape[1]} M={mach}.csv'
+
+
+    plot_results('test.csv', 'output.csv')
 
 if __name__ == "__main__":
-    plot_results()
+    test_main()

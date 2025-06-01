@@ -47,7 +47,6 @@ def mesh_plot(x_list, y_list, title, return_squishedness=False):
                 print(f'grapher - index error @ji={j,i} for shape of {np.shape(x_list)}')
                 pass
     plt.title(title)
-    plt.scatter((2, 2, 3, 3), (0, 1, 0, 1))
     plt.axis('equal')
     plt.show()
     if return_squishedness:
