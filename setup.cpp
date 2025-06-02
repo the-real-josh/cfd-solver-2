@@ -15,17 +15,27 @@ std::string res_fname;
 // setup
 void get_config() {
     // get these guys based on a config file later
-    i_max = 3;
-    j_max = 3;
-    t_infty = 300.0f;
-    p_infty = 101325.0f;
-    mach_infty = 0.3f;
-    mesh_fname = "mesh sh=11x21.csv";
-    res_fname = "output.csv";
+    csv::CSVReader reader("solver_commands.csv"); // hard-coded to be the same as the python
+    auto it = reader.begin();
+    csv::CSVRow row = *it;
+
+    i_max = row["i_max"].get<int>();
+    j_max = row["j_max"].get<int>();
+    t_infty = row["t_infty"].get<float>();
+    p_infty = row["p_infty"].get<float>();
+    mach_infty = row["mach_infty"].get<float>();
+    mesh_fname = row["mesh_fname"].get<std::string>(); 
+    res_fname = row["res_fname"].get<std::string>();
+
+
+    std::cout << "Config getter reporting:\n";
+    std::cout << "i_max: " << i_max << "\n";
+    std::cout << "j_max: " << j_max << "\n";
+    std::cout << "Mesh fname: " << mesh_fname << "\n";
 }
 
 arrayD3 get_mesh_data() {
-    std::cout << "mesh data gettter reporting\n";
+    std::cout << "mesh data getter reporting\n";
 
     // TODO: find out the dimensions from config file or cin
     // np.size-like. ie, an array {1, 1, 1} has n_cols of 3 and n_rows of 0
@@ -34,11 +44,12 @@ arrayD3 get_mesh_data() {
     arrayD2 flat_mesh_data;
 
     // read csv in flat-paired form
-    csv::CSVReader reader("test.csv");
+    csv::CSVReader reader(mesh_fname);
     for (auto& row: reader) {
         // Note: Can also use index of column with [] operator
         flat_mesh_data.push_back({row["x"].get<float>(), row["y"].get<float>()});
     }
+
 
     // // debug print
     // for (const auto& pair: flat_mesh_data) {
@@ -62,33 +73,42 @@ arrayD3 get_mesh_data() {
     //if(i_max == 0 || flat_mesh_data.size()%i_max != 0 ) throw std::domain_error( "bad #cols" ) ;
 
     // fill up mesh_data
-    for (int j = 0; j < j_max; j++) {
+    // is <= because need to include top row, and to access the things at the end of the top row, you need to go to the end of the top row
+    // is i_max+1 because there are 6 node elements for max index of 5.
+
+    // why <= and i_max+1?
+    // see readme.txt#about cell indexing##converting. You are going from max index of nodes to max number of nodes.
+    for (int j = 0; j <= j_max; j++) {
         // one whole row each iteration using 
         mesh_data.push_back(
-            arrayD2(flat_mesh_data.begin() + (j*i_max),
-                    flat_mesh_data.begin() + ((j+1)*i_max))
+            arrayD2(flat_mesh_data.begin() + (j*(i_max+1)),
+                    flat_mesh_data.begin() + ((j+1)*(i_max+1)))
         );
     }
 
-    // // print out the mesh_data to see if it is good
-    // for (const auto& row : mesh_data) {
-    //     for (const auto& pair: row) {
-    //         for (const auto& xy: pair) {
-    //             std::cout << xy;
-    //         }
-    //         std::cout << " ";
-    //     }
-    //     std::cout << "\n";
-    // }
+    std::cout << "begin mesh printing - mesh node array is of size: " << mesh_data.size() << "," << mesh_data[0].size() << "\n";
+    // print out the mesh_data to see if it is good
+    for (const auto& row : mesh_data) {
+        for (const auto& pair: row) {
+            for (const auto& xy: pair) {
+                std::cout << xy;
+            }
+            std::cout << " ";
+        }
+        std::cout << "\n";
+    }
+    std::cout << "End mesh data printing\n";
 
     // return it as an arrayD3
     return mesh_data;
 }
 
-
+// bug: only outputs data in 13x24 instead of 14x25 as it should
 void save_data(arrayD3 q_out) {
     /* save the data
        saving format: 4 columns for each of the state variables */
+
+    std::cout << "data saver says hello.\n";
 
     // flatten the cells
     std::vector<float> flat_rho;
@@ -104,7 +124,24 @@ void save_data(arrayD3 q_out) {
             flat_rho_E.push_back(q_out[j][i][3]);
         }
     }
-    
+
+    // note: arrays are arranged differently, so we have the mesh like so:
+    // [...  rows                             ]
+    // [...                                   ]
+    // [...                                   ]
+    // [...                                   ]
+    // instead of:
+    //   |-  -| |-  -| |-  -| |-  -| |-  -|
+    //   | c  | |    | |    | |    | |    |
+    // { | o  | |    | |    | |    | |    | }
+    //   | l  | |    | |    | |    | |    |
+    //   | s  | |    | |    | |    | |    |
+    //   |_  _| |_  _| |_  _| |_  _| |_  _|
+    // such that rows are accessed q[i][j]
+
+    // debugging message
+    std::cout << "Data saver: data has dimensions of " << q_out.size() << "," << q_out[0].size() << "\n";
+
     
     // write to the output file
     std::ofstream file(res_fname);
@@ -118,5 +155,6 @@ void save_data(arrayD3 q_out) {
             });  
     }
 
+    std::cout << "Data saver: data has been saved\n";
 }
 

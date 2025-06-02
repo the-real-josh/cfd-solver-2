@@ -50,9 +50,6 @@ class Solution {
 
         void boundary_conditions();               // enforce boundary conditions
 
-        int i_max;
-        int j_max;
-
         // simple state getters
         float p(int j, int i);                  // get pressure at a cell
         float T(int j, int i);                  // get temperature at a cell

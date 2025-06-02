@@ -7,22 +7,23 @@
 
 // data inputter
 void Solution::innit(arrayD3 _mesh_data) {
+
     /*there is a bug in here that is making the code put the wrong amount of states per cell*/
 
     std::cout << "innit\n";
 
     // take the mesh data in
     mesh_data = _mesh_data;
-    i_max = mesh_data[0].size() - 1; // indeces are one minus the size (ie, size 3 has maximum index of 2)
-    j_max = mesh_data.size() - 1;
 
-    std::cout << "jmax, imax = " << j_max << "," << i_max;
+    std::cout << "j_max, i_max = " << j_max << "," << i_max << "\n";
+    system("pause");
 
     q.resize(j_max);
-    // fill in the initial state q
+    // fill in the initial state q (go up to the max node index MINUS ONE because cells are one less than nodes)
     for (int j = 0; j<=j_max-1; j++) { 
         q[j].resize(i_max);
         for (int i = 0; i<=i_max-1; i++) {
+                // DEBUGGING: print out indeces to ensure iteration is correct
                 std::cout << "current index (j,i) = " << j << "," << i << "\n";
                 q[j][i] = std::vector<float>{
                     static_cast<float>(p_infty / (R * t_infty)), // solve for density
@@ -33,7 +34,7 @@ void Solution::innit(arrayD3 _mesh_data) {
         }
     }
 
-    // print out the mesh_data to see if it is good
+    // DEBUGGING: print out the mesh_data to see if it is good
     for (const auto& row : q) {
         for (const auto& state: row) {
             // for (const auto& xy: pair) {
