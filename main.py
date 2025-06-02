@@ -22,7 +22,7 @@ class Mesh:
             # - the average amount that is changed by the iterator
             # - default is 1e-6
 
-        def find_arg_nearest(array,value):
+        def find_arg_nearest(array, value):
             """inputs: the array you want to search, value that you want to seach for
                 outputs: the index of the value closest to the value you searched for"""
             idx = np.searchsorted(array, value, side="left")
@@ -59,44 +59,51 @@ class Mesh:
 
         # define number of nodes
         # +1 because number of cells-->number of nodes
-        J_max = self.core_dimensions[0]+1 # y direction
-        I_max = self.core_dimensions[1]+1 # x direction
+        i_max = self.core_dimensions[0]+1 # y direction (axis 0)
+        j_max = self.core_dimensions[1]+1 # x direction (axis 1)
 
         # generate xi-eta grid
         # xi (x)
-        xi_list = np.zeros((J_max, I_max), dtype=float) # create J_max rows of I_max entries each
-        for ari in range(J_max): # for every row in the J_max steps
-            for i in range(I_max): # generate a row with I_max steps
-                xi_list[ari, i] = (i) / (I_max-1)
+        xi_list = np.zeros((i_max, j_max), dtype=float) # create J_max rows of I_max entries each
+        for i in range(i_max): # for every row in the J_max steps
+            for j in range(j_max): # generate a row with I_max steps
+                xi_list[i,j] = (i) / (i_max-1)
 
         # eta (y)
-        eta_list = np.zeros((J_max, I_max), dtype=float) # create __ rows of ___ entries each
-        for i in range(I_max): # for every row,
-            for ari in range(J_max): # generae a row.
-                eta_list[ari, i] = (ari) / (J_max-1)
+        eta_list = np.zeros((i_max, j_max), dtype=float) # create __ rows of ___ entries each
+        for i in range(i_max): # for every row,
+            for j in range(j_max): # generae a row.
+                eta_list[i,j] = (j) / (j_max-1)
         
-        # test plot
-        # plt.title(f'Algebraic Grid in ξ-η Space'); plt.plot(xi_list, eta_list, marker='.', color='k', linestyle='none'); plt.show()
+        # xi_list, eta_list = np.meshgrid(np.linspace(0, 1, num=j_max), np.linspace(0,1, num=i_max))
 
-        x_list = np.zeros((J_max, I_max), dtype=float); y_list = x_list.copy() # pre-allocate memory. Remember - zeroes works by generating __ rows of ___ length
-        for i in range(I_max):
-            for ari in range(J_max):
+        # test plot
+        plt.title(f'Algebraic Grid in ξ-η Space'); plt.plot(eta_list, xi_list, marker='.', color='k', linestyle='none'); plt.xlabel('eta, or j'); plt.ylabel('xi, or i'); plt.show()
+        
+        # algebraic grid
+        x_list = np.zeros((i_max, j_max), dtype=float)
+        y_list = x_list.copy() # pre-allocate memory. Remember - zeroes works by generating __ rows of ___ length
+        for i in range(i_max):
+            for j in range(j_max):
                 try:
-                    x_list[ari, i] = x_l + xi_list[ari, i] * (x_r - x_l) # linearly scale x up
+                    x_list[i, j] = x_l + eta_list[i, j] * (x_r - x_l) # linearly scale x up
                 except:
-                    print(f'bad x, {[i, ari]} out of bounds for either x list: {np.shape(x_list)} or xi_list: {np.shape(xi_list)}')
+                    print(f'bad x, {[i, j]} out of bounds for either x list: {np.shape(x_list)} or xi_list: {np.shape(xi_list)}')
                     print(x_list)
                     exit()
                 try:
-                    x = x_list[0, i] # COULD take advantage of the fact that the domain on the x scales from 0 to 1 and just say xi, but eh
-                    y_list[ari, i] = y_lower(x) + eta_list[ari, i] * (y_upper(x) - y_lower(x))
+                    x = x_list[0, j] # COULD take advantage of the fact that the domain on the x scales from 0 to 1 and just say xi, but eh
+                    y_list[i, j] = y_lower(x) + xi_list[i,j] * (y_upper(x) - y_lower(x))
                 except:
                     print(f'bad y')
                     print(y_list)
                     exit()
 
+        plt.title(f'Algebraic Grid in x-y Space'); plt.plot(x_list, y_list, marker='.', color='k', linestyle='none'); plt.show()
+
         # preliminary calcs
-        delta_xi = 1/(I_max);   delta_eta = 1/(J_max) # this is because xi and eta are defined to be on the interval {0<x<1}. In python if your list has max index of 3, then you have 2 divisions
+        delta_xi = 1/(j_max)
+        delta_eta = 1/(i_max) # this is because xi and eta are defined to be on the interval {0<x<1}. In python if your list has max index of 3, then you have 2 divisions
 
         # break out of the loop either when residuals hit the floor or iterations hit the ceiling
         max_iterations = 100*self.core_dimensions[0] # iteration ceiling
@@ -113,82 +120,83 @@ class Mesh:
             print('\b'*len(str(iterations-1)), end='', flush=True)
             print(iterations, end='', flush=True)
 
-
-            corner_pts = [find_arg_nearest(x_list[0], 2.0), find_arg_nearest(x_list[0], 3.0)] # define the corner points and the bool function (for simplicity)
+            corner_pts = [find_arg_nearest(x_list[0, :], 2.0), find_arg_nearest(x_list[0, :], 3.0)] # define the corner points and the bool function (for simplicity)
             def corner_point(i,j):
-                if j in [0, J_max-1] and i in corner_pts:
+                if i in [0, i_max-1] and j in corner_pts:
                     return True
                 else:
                     return False
 
             # sets the iterations for i,j
-            iter_set = np.array([[(i, j) for i in range(I_max)] for j in range(J_max)]).reshape(I_max*J_max, 2)
+            iter_set = np.array([[(i, j) for j in range(j_max)] for i in range(i_max)]).reshape(i_max*j_max, 2)
 
             iter_residual = 0
             for i,j in iter_set:
-                if (corner_point(i,j)):
-                    if j == 0 and i < I_max/2:
+                # corner points
+                if (corner_point(i, j)):
+                    if i == 0 and j < j_max/2:
                         new_x_val = 2.0
                         new_y_val = 0.0
-                        y_list[j,i] = new_y_val
-                    elif j == J_max - 1 and i < I_max/2:
+                        y_list[i, j] = new_y_val
+                    elif i == i_max - 1 and j < j_max/2:
                         new_x_val = 2.0
                         new_y_val = 1.0
-                        y_list[j,i] = new_y_val
-                    elif j == 0 and i > I_max/2:
+                        y_list[i, j] = new_y_val
+                    elif i == 0 and j > j_max/2:
                         new_x_val = 3.0
                         new_y_val = 0.0
-                    elif j == J_max-1 and i > I_max/2:
+                    elif i == i_max-1 and j > j_max/2:
                         new_x_val = 3.0
                         new_y_val = 1.0
-                elif j in [0, J_max - 1]: # for top and bottom
-                    if x_list[j,i] < 2 or x_list[j,i] > 3:
+
+                # boundary conditions
+                elif i in [0, i_max - 1]: # for top and bottom
+                    if x_list[i, j] < 2 or x_list[i, j] > 3:
                         try: 
-                            new_x_val = x_list[j+1,i]
+                            new_x_val = x_list[i+1, j]
                         except:
-                            new_x_val = x_list[j-1,i]
-                        new_x_val = x_list[j,i] # override
-                    if x_list[j,i] < 3 and x_list[j,i] > 2:
+                            new_x_val = x_list[i-1, j]
+                        new_x_val = x_list[i,j] # override for corner points
+                    if x_list[i, j] < 3 and x_list[i, j] > 2:
                         try:
-                            new_x_val = x_list[j+2, i] + ((y_lower(x_list[j,i-1]) - y_lower(x_list[j,i+1]))/(x_list[j,i-1] - x_list[j,i+1])) * delta_xi * x_r 
+                            new_x_val = x_list[i+2, j] + ((y_lower(x_list[i, j-1]) - y_lower(x_list[i, j+1]))/(x_list[i,j-1] - x_list[i, j+1])) * delta_xi * x_r 
                             new_y_val = y_lower(new_x_val)
-                            iter_residual += abs(y_list[j,i] - new_y_val)
-                            y_list[j,i] = new_y_val
+                            iter_residual += abs(y_list[i,j] - new_y_val)
+                            y_list[i,j] = new_y_val
                         except:
-                            new_x_val = x_list[j-2, i] + ((y_lower(x_list[j,i-1]) - y_lower(x_list[j,i+1]))/(x_list[j,i-1] - x_list[j,i+1])) * delta_xi * x_r 
+                            new_x_val = x_list[i-2,j] + ((y_lower(x_list[i, j-1]) - y_lower(x_list[i,j+1]))/(x_list[i,j-1] - x_list[i,j+1])) * delta_xi * x_r 
                             new_y_val = y_upper(new_x_val)
-                            iter_residual += abs(y_list[j,i] - new_y_val)
-                            y_list[j,i] = new_y_val
-                    iter_residual += abs(x_list[j,i] - new_x_val)
-                    x_list[j,i] = new_x_val
-                elif i in [0, I_max - 1]:
-                    if i == 0:
-                        new_y_val = y_list[j,i + 1]
-                        iter_residual += abs(y_list[j,i] - new_y_val)
-                    elif i == I_max - 1:
-                        new_y_val = y_list[j,i - 1]
-                    iter_residual += abs(y_list[j,i] - new_y_val)
-                    y_list[j,i] = new_y_val
+                            iter_residual += abs(y_list[i,j] - new_y_val)
+                            y_list[i,j] = new_y_val
+                    iter_residual += abs(x_list[i, j] - new_x_val)
+                    x_list[i,j] = new_x_val
+                elif j in [0, j_max - 1]: # for left and right
+                    if j == 0:
+                        new_y_val = y_list[i, j+1]
+                        iter_residual += abs(y_list[i, j] - new_y_val)
+                    elif j == j_max - 1:
+                        new_y_val = y_list[i, j - 1]
+                    iter_residual += abs(y_list[i, j] - new_y_val)
+                    y_list[i,j] = new_y_val
                 
                 else: # general inside equations
-                    alpha = 1/(4*delta_eta**2)  * ((x_list[j+1,i] - x_list[j-1,i])**2 + (y_list[j+1,i] - y_list[j-1,i])**2) # see cizmas p.33
-                    beta = -1/(4*delta_eta*delta_xi) * ((x_list[j,i+1] - x_list[j,i-1])*(x_list[j+1,i] - x_list[j-1,i])   +   (y_list[j,i+1] - y_list[j,i-1])*(y_list[j+1,i] - y_list[j-1,i]))
-                    gamma = 1/(4*delta_xi**2) * ((x_list[j,i+1] - x_list[j,i-1])**2 + (y_list[j,i+1] - y_list[j,i-1])**2)
+                    alpha = 1/(4*delta_eta**2) * ((x_list[i,j+1] - x_list[i,j-1])**2 + (y_list[i,j+1] - y_list[i,j-1])**2) # see cizmas p.33
+                    beta = -1/(4*delta_eta*delta_xi) * ((x_list[i+1, j] - x_list[i-1, j])*(x_list[i, j+1] - x_list[i, j-1])   +   (y_list[i+1, j] - y_list[i-1, j])*(y_list[i,j+1] - y_list[i,j-1]))
+                    gamma = 1/(4*delta_xi**2) * ((x_list[i+1,j] - x_list[i-1,j])**2 + (y_list[i+1,j] - y_list[i-1,j])**2)
 
                     k1 = alpha / delta_xi**2
                     k2 = -beta / (2*delta_xi*delta_eta)
                     k3 = gamma / delta_eta**2
 
-                    new_x_val = (0.5/(k1+k3)) * (k2*x_list[j-1,i-1] + k3*x_list[j-1,i] -k2*x_list[j-1,i+1]+ k1*x_list[j,i-1]+ k1*x_list[j,i+1] -k2*x_list[j+1,i-1] + k3*x_list[j+1,i] + k2*x_list[j+1,i+1])
-                    x_list[j,i] = new_x_val
-                    iter_residual += abs(x_list[j,i] - new_x_val)
+                    new_x_val = (0.5/(k1+k3)) * (k2*x_list[i-1, j-1] + k3*x_list[i, j-1] -k2*x_list[i+1, j-1]+ k1*x_list[i-1, j]+ k1*x_list[i+1, j] -k2*x_list[i-1, j+1] + k3*x_list[i, j+1] + k2*x_list[i+1, j+1])
+                    x_list[i,j] = new_x_val
+                    iter_residual += abs(x_list[i, j] - new_x_val)
 
-                    new_y_val = (0.5/(k1+k3)) * (k2*y_list[j-1,i-1] + k3*y_list[j-1,i] -k2*y_list[j-1,i+1]+ k1*y_list[j,i-1]+ k1*y_list[j,i+1] -k2*y_list[j+1,i-1] + k3*y_list[j+1,i] + k2*y_list[j+1,i+1])
-                    iter_residual += abs(y_list[j,i] - new_y_val)
-                    y_list[j,i] = new_y_val
-                    
+                    new_y_val = (0.5/(k1+k3)) * (k2*y_list[i-1, j-1] + k3*y_list[i, j-1] -k2*y_list[i+1, j-1]+ k1*y_list[i-1, j]+ k1*y_list[i+1, j] -k2*y_list[i-1, j+1] + k3*y_list[i, j+1] + k2*y_list[i+1, j+1])
+                    iter_residual += abs(y_list[i, j] - new_y_val)
+                    y_list[i,j] = new_y_val
 
-            aggregate_residuals[iterations] = iter_residual/(I_max * J_max)
+            aggregate_residuals[iterations] = iter_residual/(i_max * j_max)
             if aggregate_residuals[iterations] < min_residual:
                 print(f'\nResidual<{min_residual} - convergence detected!')
                 break
@@ -370,7 +378,8 @@ def plot_results(mesh_core_dimensions=None, mesh_fname=None, results_fname=None,
 #  - number of nodes: n+1
 def main():
     # generate mesh
-    core_dimensions = [(4, 20), (10,50)] # core mesh shapes
+    # i is no longer 
+    core_dimensions = [(10,50)] # core mesh shapes
     machs = [0.5]
     for c_dim in core_dimensions:
 
@@ -416,4 +425,4 @@ def test_main():
     plot_results(mesh_core_dimensions=(2,1), mesh_fname='test.csv', results_fname='output.csv')
 
 if __name__ == "__main__":
-    test_main()
+    main()

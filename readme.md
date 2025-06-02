@@ -17,6 +17,11 @@ this will also be followed by the file naming convention
 
 The preferred notation will henceforth be a vector of column-containing vectors, because that is more intuitive.  
 
+
+What I'm about to do:
+ - I will make the i be associated with the axis 0 (which will be y) and j be associated with axis 1 (which will be x)
+  
+
 ## Example: 10x50 grid:
 ### normal mesh:
 cells
