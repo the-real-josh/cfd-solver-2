@@ -67,11 +67,11 @@ arrayD3 get_mesh_data() {
 
     // why <= and i_max+1?
     // see readme.txt#about cell indexing##converting. You are going from max index of nodes to max number of nodes.
-    for (int j = 0; j <= j_max; j++) {
+    for (int i = 0; i <= i_max; i++) {
         // one whole row each iteration using 
         mesh_data.push_back(
-            arrayD2(flat_mesh_data.begin() + (j*(i_max+1)),
-                    flat_mesh_data.begin() + ((j+1)*(i_max+1)))
+            arrayD2(flat_mesh_data.begin() + (i*(j_max+1)),
+                    flat_mesh_data.begin() + ((i+1)*(j_max+1)))
         );
     }
 

@@ -185,19 +185,7 @@ void Solution::iterate() {
     /* conduct one iteration*/
     std::cout << "Iterate\n";
     
-    // debug print the mesh (for small meshes only!)
-    for (const auto& line: mesh_data) {
-        for (const auto& pair: line) {
-            std::cout << "(";
-            for (const auto& xy: pair) {
-                std::cout << xy << ","; 
-            }
-            std::cout << ")";
-        }
-        std::cout << "\n";
-    }
-    std::cout << "\n";
-
+    std::cout << "input i, then enter, then j then enter to get mesh data.";
     int test_j;
     int test_i;
     for (int i = 0; i<10; i++) {
