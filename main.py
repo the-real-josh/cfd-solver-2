@@ -235,8 +235,6 @@ class Mesh:
         df = pd.read_csv(fname)
         self.x_list = df[f'x'].to_numpy().reshape(ghostified_dimensions)
         self.y_list = df[f'y'].to_numpy().reshape(ghostified_dimensions)
-        mesh_plot(self.x_list, self.y_list)
-        plt.show()
         print(f'Mesh read from {os.path.join(os.getcwd(), fname)}')
     def plot(self):
         """Pass data in as x_list and y_list as a list of lists in the shape of the mesh"""
@@ -367,7 +365,7 @@ def main():
     # generate mesh
     # i is no longer 
     core_dimensions = [(10,50)] # core mesh shapes
-    machs = [0.5]
+    machs = [0.3]
     for c_dim in core_dimensions:
 
         # mesh file name
@@ -410,4 +408,4 @@ def test_main():
     plot_results_pv(mesh_core_dimensions=(2,1), mesh_fname='test.csv', results_fname='output.csv')
 
 if __name__ == "__main__":
-    main()
+    test_main()

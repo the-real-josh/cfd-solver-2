@@ -96,7 +96,81 @@ void Solution::boundary_conditions() {
         edits q such that boundary conditions are enforced
     output: 
         None*/
-    std::cout << "boundary condition enforcement function reporting\n";
+    std::cout << "Enforcing Boundary Conditions\n";
+
+    // temporary variables for enforcement
+    std::vector<float> boundary_velocity;
+    std::vector<float> wall_vec;
+    std::vector<float> wall_norm;
+    float v_dot_n;
+
+    // inlet boundary condition (compiles and runs good)
+    std::vector<float> q_inlet = {
+        static_cast<float>(p_infty/(R*t_infty)),
+        static_cast<float>(mach_infty*sqrt(gamma*R*t_infty)),
+        0.0f,
+        static_cast<float>(cv*t_infty + 0.5*pow(mach_infty*sqrt(gamma*R*t_infty), 2))
+    };
+    for (int i = 0; i < i_max;/*< because nodes->cells*/ i++) {
+        q[i][0] = q_inlet;
+    }
+
+    // wall boundary condition (inner ghost cells)
+    for (int j = 1; j < j_max; j++) {
+        // lower
+            boundary_velocity = {q[1][j][1]/q[1][j][0], q[1][j][2]/q[1][j][0]}; // velocity of the boundary cell associated with the inner ghost (outer boundary)
+            
+            std::cout << "\nwall boundary velocity at 1," << j << "\n"; 
+            for (auto& el: boundary_velocity) {
+                std::cout << el << "\n";
+            }
+
+
+            wall_vec = {mesh_data[2][j+1][0] - mesh_data[2][j][0],
+                                             mesh_data[2][j+1][1] - mesh_data[2][j][1]}; // vector parallel with the wall element
+
+            std::cout << "\nwall element tangent vector at 2," << j+1 << "\n"; 
+            for (auto& el: wall_vec) {
+                std::cout << el << "\n";
+            }
+
+            wall_norm = {static_cast<float>(-wall_vec[1] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2))),
+                                            static_cast<float>( wall_vec[0] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2)))}; // perpendicular, inward-pointing unit vector that is normal to the border wall element
+            v_dot_n = boundary_velocity[0]*wall_norm[0] + boundary_velocity[1]*wall_norm[1];
+            
+            std::cout << "\nwall normal vector at 2," << j << "\n"; 
+            for (auto& el: wall_norm) {
+                std::cout << el << "\n";
+            }
+            
+            q[1][j] = {
+                q[2][j][0],
+                static_cast<float>(q[2][j][1] + 2*wall_norm[0]*v_dot_n),
+                static_cast<float>(q[2][j][2] + 2*wall_norm[1]*v_dot_n),
+                q[2][j][3]
+            };
+
+            system("pause");
+
+        // upper
+            boundary_velocity = {q[i_max-3][j][1]/q[i_max-3][j][0], q[i_max-3][j][2]/q[i_max-3][j][0]}; // velocity of the boundary cell associated with the inner ghost (outer boundary)
+            wall_vec = {mesh_data[i_max-2][j+1][0] - mesh_data[i_max-2][j][0],
+                                             mesh_data[i_max-2][j+1][1] - mesh_data[i_max-2][j][1]}; // vector parallel with the wall element
+            wall_norm = {static_cast<float>( wall_vec[1] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2))),
+                                            static_cast<float>(-wall_vec[0] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2)))}; // perpendicular, inward-pointing unit vector that is normal to the border wall element
+            v_dot_n = boundary_velocity[0]*wall_norm[0] + boundary_velocity[1]*wall_norm[0];
+            q[i_max-2][j] = {
+                q[i_max-3][j][0],
+                static_cast<float>(q[i_max-3][j][1] + 2*wall_norm[0]*v_dot_n),
+                static_cast<float>(q[i_max-3][j][2] + 2*wall_norm[1]*v_dot_n),
+                q[i_max-3][j][3]
+            };
+
+    }
+
+    // wall boundary condition (outer ghost cells)
+
+    // outlet boundary condition
 }
 
 arrayD3 Solution::get_q() {
@@ -110,9 +184,34 @@ arrayD3 Solution::get_q() {
 void Solution::iterate() {
     /* conduct one iteration*/
     std::cout << "Iterate\n";
+    
+    // debug print the mesh (for small meshes only!)
+    for (const auto& line: mesh_data) {
+        for (const auto& pair: line) {
+            std::cout << "(";
+            for (const auto& xy: pair) {
+                std::cout << xy << ","; 
+            }
+            std::cout << ")";
+        }
+        std::cout << "\n";
+    }
+    std::cout << "\n";
 
-    /*
+    int test_j;
+    int test_i;
+    for (int i = 0; i<10; i++) {
+        std::cin >> test_i;
+        std::cin >> test_j;
+        std::cout << "mesh_data for those indeces: ";
+        for (auto& k : mesh_data[test_i][test_j]) {
+            std::cout << k << "   ";
+        }
+        std::cout <<  "\n";
+    }
+
     boundary_conditions();
+    /*
     for (int j = 0; j<j_max; j++) {
         for (int i = 0; i<i_max; i++) {
 
