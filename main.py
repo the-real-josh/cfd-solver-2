@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import os
+import pyvista as pv
 
 class Mesh:
     def __init__(self, dimensions):
@@ -230,10 +231,12 @@ class Mesh:
         print(f'New Mesh saved to {os.path.join(os.getcwd(), fname)}')
 
     def read(self, fname):
-        ghostified_dimensions = [i+4+1 for i in self.core_dimensions]
+        ghostified_dimensions = [i+5 for i in self.core_dimensions]
         df = pd.read_csv(fname)
         self.x_list = df[f'x'].to_numpy().reshape(ghostified_dimensions)
         self.y_list = df[f'y'].to_numpy().reshape(ghostified_dimensions)
+        mesh_plot(self.x_list, self.y_list)
+        plt.show()
         print(f'Mesh read from {os.path.join(os.getcwd(), fname)}')
     def plot(self):
         """Pass data in as x_list and y_list as a list of lists in the shape of the mesh"""
@@ -302,15 +305,8 @@ def run(mesh_core_dimensions=None, mach=None, mesh_fname=None, results_fname=Non
 
     return 0
 
-def plot_results(mesh_core_dimensions=None, mesh_fname=None, results_fname=None, verbose=True):
-    """
-    Plots solver results
-        plots density and energy with a countourf and colorbar scale
-        docs: https://www.geeksforgeeks.org/matplotlib-pyplot-contourf-in-python/
-
-        plots velocities with a quiver
-        docs: https://matplotlib.org/stable/gallery/images_contours_and_fields/quiver_simple_demo.html#sphx-glr-gallery-images-contours-and-fields-quiver-simple-demo-py
-    """
+def plot_results_pv(mesh_core_dimensions=None, mesh_fname=None, results_fname=None, verbose=True):
+    savedir = '/'
 
     # get the pre-ghostified mesh
     curr_mesh = Mesh(mesh_core_dimensions)
@@ -318,59 +314,50 @@ def plot_results(mesh_core_dimensions=None, mesh_fname=None, results_fname=None,
     x = curr_mesh.x_list
     y = curr_mesh.y_list
 
-    # calculate centers
-    data_dimensions = [k+4 for k in mesh_core_dimensions] # cells have maximum indeces one less
-    x_cell_centers = np.zeros(data_dimensions)
-    y_cell_centers = np.zeros_like(x_cell_centers)
-    for j in range(data_dimensions[0]):
-        for i in range(data_dimensions[1]):
-            x_cell_centers[j,i] = np.mean(np.array([x[j,i],
-                                                    x[j+1,i],
-                                                    x[j,i+1],
-                                                    x[j+1,i+1]]))
-            y_cell_centers[j,i] = np.mean(np.array([y[j,i],
-                                                y[j+1,i],
-                                                y[j,i+1],
-                                                y[j+1,i+1]]))
-            
-    # test plot with no cfd data
-    plt.scatter(x_cell_centers, y_cell_centers)
-    mesh_plot(x,y)
-    plt.show()
-
     # extract results
     df = pd.read_csv(results_fname)
+    data_dimensions = [k+4 for k in mesh_core_dimensions] # cells have maximum indeces one less
     rho = df['rho'].to_numpy().reshape(data_dimensions)
     u = np.divide(df['rho_u'].to_numpy().reshape(data_dimensions), rho)
     v = np.divide(df['rho_v'].to_numpy().reshape(data_dimensions), rho)
     E = np.divide(df['rho_E'].to_numpy().reshape(data_dimensions), rho)
 
-    # plot density
-    mesh_plot(x,y)
-    z = np.ma.masked_where(rho <= 0, rho)
-    cs = plt.contourf(x_cell_centers, y_cell_centers, z,
-                      locator=matplotlib.ticker.LogLocator(),
-                      cmap="bone")
-    cbar = plt.colorbar(cs)
-    plt.title("density contour plot attempt")
+    captions = ['Density', 'x velocity', 'y velocity', 'Energy']
+    datas = [rho, u, v, E]
+    for data, caption in zip(datas, captions):
 
-    # plot density with a countourf and colorbar scale
-    # https://www.geeksforgeeks.org/matplotlib-pyplot-contourf-in-python/
+        # Create a 2D structured grid object
+        grid = pv.StructuredGrid()
+        grid.dimensions = x.shape[1], x.shape[0], 1     # Set the dimensions of the grid
+        pv.set_plot_theme("document")
+        # Create the points array with z coordinates as zeros
+        z = np.zeros_like(x.flatten())
+        points = np.stack((x.flatten(), y.flatten(), z), axis=-1)
+        # Set the points of the grid
+        grid.points = points
+        grid.cell_data[caption] = data.ravel()
 
-    # plot velocities with a quiver
-    # https://matplotlib.org/stable/gallery/images_contours_and_fields/quiver_simple_demo.html#sphx-glr-gallery-images-contours-and-fields-quiver-simple-demo-py
-    if verbose:
-        plt.show()
-    else:
-        plt.savefig(mesh_fname + "density")
-        plt.clf()
+        # only put edges when the cells are reasonably large
+        if len(x) > 30:
+            edges = False
+        else:
+            edges = True
 
-    # plot energy same as density
+        plotter = pv.Plotter(off_screen=(not verbose))
+        plotter.add_mesh(grid, scalars=caption, cmap='plasma', show_edges=edges) # default colormap is viridis
+        plotter.camera_position = 'xy'
+        plotter.show_axes()
 
-    # end
-    del df
-    plt.close()
+        # give output
+        if not verbose:
+            plotter.screenshot(f'{savedir}{caption}.png')
+        elif verbose:
+            plotter.show()
 
+        plotter.close()
+        del plotter
+
+    return 0
 
 # for n cells:
 #  - max cell index: n-1
@@ -405,24 +392,22 @@ def main():
             run(mesh_core_dimensions=c_dim, mach=mach, results_fname=results_fname, mesh_fname=mesh_fname)
         
             # view results
-            plot_results(mesh_fname, results_fname)
+            plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)
 
 def test_main():
+    """This test case shows some strange triangulation done by PyVista. I don't like PyVista, but it's what we have."""
     df = pd.read_csv('test.csv')
-    x = df['x'].to_numpy().reshape((7,6))
+    x = df['x'].to_numpy().reshape((7,6)) # i_max = 7, j_max = 6
     y = df['y'].to_numpy().reshape((7,6))
-    
-    # each column of points is a vector, and the array is vector of vectors.
-    # still correct that x -> i, and y -> j
 
     mesh_plot(x,y); plt.show()
 
-    run(mesh_core_dimensions=(2,1),
+    run(mesh_core_dimensions=(2,1), # core i_max = 1, core j_max = 2
         mach=0.5,
         results_fname='output.csv',
         mesh_fname='test.csv')
     
-    plot_results(mesh_core_dimensions=(2,1), mesh_fname='test.csv', results_fname='output.csv')
+    plot_results_pv(mesh_core_dimensions=(2,1), mesh_fname='test.csv', results_fname='output.csv')
 
 if __name__ == "__main__":
     main()

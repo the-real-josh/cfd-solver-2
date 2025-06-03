@@ -27,8 +27,8 @@ void Solution::innit(arrayD3 _mesh_data) {
                 std::cout << "current index (j,i) = " << j << "," << i << "\n";
                 q[j][i] = std::vector<float>{
                     static_cast<float>(p_infty / (R * t_infty)), // solve for density
-                    0.0f,
                     static_cast<float>((p_infty / (R * t_infty)) * (mach_infty * sqrt(1.4*R*t_infty))),
+                    0.0f,
                     static_cast<float>(0.5*pow(mach_infty * sqrt(1.4*R*t_infty), 2) + (cv*t_infty))
                 };
         }

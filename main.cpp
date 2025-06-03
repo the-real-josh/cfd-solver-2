@@ -19,7 +19,6 @@ int main() {
         sol.iterate();
     }
 
-    std::cout << "made it this far!\n";
     // save results
     save_data(sol.get_q());
 
