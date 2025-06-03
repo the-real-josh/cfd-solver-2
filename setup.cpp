@@ -57,7 +57,7 @@ arrayD3 get_mesh_data() {
 
     // assert that the given dimensions match the data
     std::cout << "mesh data size: " << flat_mesh_data.size() << "\n";
-    std::cout << "mesh integer division: " << flat_mesh_data.size() % i_max << "\n";
+    std::cout << "mesh integer division: " << flat_mesh_data.size() % (i_max+1) << "\n";
 
     //if(i_max == 0 || flat_mesh_data.size()%i_max != 0 ) throw std::domain_error( "bad #cols" ) ;
 

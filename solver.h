@@ -23,8 +23,8 @@ void save_data(arrayD3);
 
 // can't declare variables here, or else it appears in all the files, leading to a conflict.
 // extern is supposed to fix this definition/declaration confusion?
-extern int i_max;
-extern int j_max;
+extern int i_max; // max index of the ghost nodes
+extern int j_max; // max index of the ghost nodes
 extern float t_infty; // kelvin
 extern float p_infty; // pascals
 extern float mach_infty;
