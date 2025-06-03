@@ -4,12 +4,10 @@
 
 
 int main() {
-    std::cout << "main reporting\n";
-
     // get solver configuration (from python)
     get_config();
 
-     // initialize the solver
+    // initialize the solver
     arrayD3 mesh_data = get_mesh_data();
     Solution sol;
     sol.innit(mesh_data);

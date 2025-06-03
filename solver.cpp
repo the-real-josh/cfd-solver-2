@@ -15,34 +15,21 @@ void Solution::innit(arrayD3 _mesh_data) {
     // take the mesh data in
     mesh_data = _mesh_data;
 
-    std::cout << "j_max, i_max = " << j_max << "," << i_max << "\n";
-    system("pause");
+    std::cout << "i_max, j_max = " << i_max << "," << j_max << "\n";
+    // system("pause");
 
-    q.resize(j_max);
+    q.resize(i_max);
     // fill in the initial state q (go up to the max node index MINUS ONE because cells are one less than nodes)
-    for (int j = 0; j<=j_max-1; j++) { 
-        q[j].resize(i_max);
-        for (int i = 0; i<=i_max-1; i++) {
-                // DEBUGGING: print out indeces to ensure iteration is correct
-                std::cout << "current index (j,i) = " << j << "," << i << "\n";
-                q[j][i] = std::vector<float>{
+    for (int i = 0; i<=i_max-1; i++) { 
+        q[i].resize(j_max);
+        for (int j = 0; j<=j_max-1; j++) {
+                q[i][j] = std::vector<float>{
                     static_cast<float>(p_infty / (R * t_infty)), // solve for density
                     static_cast<float>((p_infty / (R * t_infty)) * (mach_infty * sqrt(1.4*R*t_infty))),
                     0.0f,
                     static_cast<float>(0.5*pow(mach_infty * sqrt(1.4*R*t_infty), 2) + (cv*t_infty))
                 };
         }
-    }
-
-    // DEBUGGING: print out the mesh_data to see if it is good
-    for (const auto& row : q) {
-        for (const auto& state: row) {
-            // for (const auto& xy: pair) {
-            //     std::cout << xy;
-            // }
-            std::cout << state[0] << " ";
-        }
-        std::cout << "\n";
     }
 }
 

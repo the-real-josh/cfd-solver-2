@@ -28,7 +28,7 @@ void get_config() {
     res_fname = row["res_fname"].get<std::string>();
 
 
-    std::cout << "Config getter reporting:\n";
+    std::cout << "Config:\n";
     std::cout << "i_max: " << i_max << "\n";
     std::cout << "j_max: " << j_max << "\n";
     std::cout << "Mesh fname: " << mesh_fname << "\n";
@@ -50,17 +50,6 @@ arrayD3 get_mesh_data() {
         flat_mesh_data.push_back({row["x"].get<float>(), row["y"].get<float>()});
     }
 
-
-    // // debug print
-    // for (const auto& pair: flat_mesh_data) {
-    //     for (const auto& xy: pair) {
-    //         std::cout << xy << " "; 
-    //     }
-    //     std::cout << " -- ";
-    // }
-    // std::cout << "\n";
-    
-    
     // reshape into proper dimensions
 
     // declare mesh_data
@@ -86,18 +75,6 @@ arrayD3 get_mesh_data() {
         );
     }
 
-    std::cout << "begin mesh printing - mesh node array is of size: " << mesh_data.size() << "," << mesh_data[0].size() << "\n";
-    // print out the mesh_data to see if it is good
-    for (const auto& row : mesh_data) {
-        for (const auto& pair: row) {
-            for (const auto& xy: pair) {
-                std::cout << xy;
-            }
-            std::cout << " ";
-        }
-        std::cout << "\n";
-    }
-    std::cout << "End mesh data printing\n";
 
     // return it as an arrayD3
     return mesh_data;
@@ -108,39 +85,24 @@ void save_data(arrayD3 q_out) {
     /* save the data
        saving format: 4 columns for each of the state variables */
 
-    std::cout << "data saver says hello.\n";
-
     // flatten the cells
     std::vector<float> flat_rho;
     std::vector<float> flat_rho_u;
     std::vector<float> flat_rho_v;
     std::vector<float> flat_rho_E;
     
-    for (int j = 0; j<q_out.size(); j++) {
-        for (int i = 0; i< q_out[0].size(); i++) {
-            flat_rho.push_back(q_out[j][i][0]);
-            flat_rho_u.push_back(q_out[j][i][1]);
-            flat_rho_v.push_back(q_out[j][i][2]);
-            flat_rho_E.push_back(q_out[j][i][3]);
+    for (int i = 0; i<q_out.size(); i++) {
+        for (int j = 0; j< q_out[0].size(); j++) {
+            flat_rho.push_back(q_out[i][j][0]);
+            flat_rho_u.push_back(q_out[i][j][1]);
+            flat_rho_v.push_back(q_out[i][j][2]);
+            flat_rho_E.push_back(q_out[i][j][3]);
         }
     }
 
-    // note: arrays are arranged differently, so we have the mesh like so:
-    // [...  rows                             ]
-    // [...                                   ]
-    // [...                                   ]
-    // [...                                   ]
-    // instead of:
-    //   |-  -| |-  -| |-  -| |-  -| |-  -|
-    //   | c  | |    | |    | |    | |    |
-    // { | o  | |    | |    | |    | |    | }
-    //   | l  | |    | |    | |    | |    |
-    //   | s  | |    | |    | |    | |    |
-    //   |_  _| |_  _| |_  _| |_  _| |_  _|
-    // such that rows are accessed q[i][j]
 
     // debugging message
-    std::cout << "Data saver: data has dimensions of " << q_out.size() << "," << q_out[0].size() << "\n";
+    std::cout << "Data saver: data has dimensions of i,j " << q_out.size() << "," << q_out[0].size() << "\n";
 
     
     // write to the output file

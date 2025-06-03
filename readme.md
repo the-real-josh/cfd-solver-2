@@ -7,19 +7,7 @@
     - display results
 
 # about cell indexing
-The cell indexing scheme in the Python mesher is made of a vector of row-containing vectors. The value at indeces (i,j) may be accessed by cell_data[j][i]
-
-The cell indexing scheme in the C++ is made of a vector of column-containing vectors, such that the value at indeces (i,j) may be accessed q[i][j]
-
-this will also be followed by the file naming convention
-
-**In both**, i is associated with x, and j is associated with y.
-
-The preferred notation will henceforth be a vector of column-containing vectors, because that is more intuitive.  
-
-
-What I'm about to do:
- - I will make the i be associated with the axis 0 (which will be y) and j be associated with axis 1 (which will be x)
+The i be associated with the axis 0 (which will be y) and j be associated with axis 1 (which will be x)
   
 
 ## Example: 10x50 grid:
