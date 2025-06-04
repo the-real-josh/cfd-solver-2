@@ -118,9 +118,9 @@ void Solution::boundary_conditions() {
     // wall boundary condition (inner ghost cells)
     for (int j = 1; j < j_max; j++) {
         // lower
-            boundary_velocity = {q[1][j][1]/q[1][j][0], q[1][j][2]/q[1][j][0]}; // velocity of the boundary cell associated with the inner ghost (outer boundary)
+            boundary_velocity = {q[2][j][1]/q[2][j][0], q[2][j][2]/q[2][j][0]}; // velocity of the boundary cell associated with the inner ghost (outer boundary)
             
-            std::cout << "\nwall boundary velocity at 1," << j << "\n"; 
+            std::cout << "\nwall boundary velocity at cell 2," << j << "\n"; 
             for (auto& el: boundary_velocity) {
                 std::cout << el << "\n";
             }
@@ -129,7 +129,7 @@ void Solution::boundary_conditions() {
             wall_vec = {mesh_data[2][j+1][0] - mesh_data[2][j][0],
                                              mesh_data[2][j+1][1] - mesh_data[2][j][1]}; // vector parallel with the wall element
 
-            std::cout << "\nwall element tangent vector at 2," << j+1 << "\n"; 
+            std::cout << "\nwall element tangent vector between nodes 2," << j << " and " << "2," << j+1 << "\n"; 
             for (auto& el: wall_vec) {
                 std::cout << el << "\n";
             }
@@ -150,7 +150,7 @@ void Solution::boundary_conditions() {
                 q[2][j][3]
             };
 
-            system("pause");
+            // system("pause");
 
         // upper
             boundary_velocity = {q[i_max-3][j][1]/q[i_max-3][j][0], q[i_max-3][j][2]/q[i_max-3][j][0]}; // velocity of the boundary cell associated with the inner ghost (outer boundary)
@@ -184,19 +184,21 @@ arrayD3 Solution::get_q() {
 void Solution::iterate() {
     /* conduct one iteration*/
     std::cout << "Iterate\n";
+
     
-    std::cout << "input i, then enter, then j then enter to get mesh data.";
-    int test_j;
-    int test_i;
-    for (int i = 0; i<10; i++) {
-        std::cin >> test_i;
-        std::cin >> test_j;
-        std::cout << "mesh_data for those indeces: ";
-        for (auto& k : mesh_data[test_i][test_j]) {
-            std::cout << k << "   ";
-        }
-        std::cout <<  "\n";
-    }
+    // // debugging: mesh geometry tester
+    // std::cout << "input i, then enter, then j then enter to get mesh data\n";
+    // int test_j;
+    // int test_i;
+    // for (int i = 0; i<10; i++) {
+    //     std::cin >> test_i;
+    //     std::cin >> test_j;
+    //     std::cout << "mesh_data for those indeces: ";
+    //     for (auto& k : mesh_data[test_i][test_j]) {
+    //         std::cout << k << "   ";
+    //     }
+    //     std::cout <<  "\n";
+    // }
 
     boundary_conditions();
     /*

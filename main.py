@@ -306,6 +306,7 @@ def run(mesh_core_dimensions=None, mach=None, mesh_fname=None, results_fname=Non
 def plot_results_pv(mesh_core_dimensions=None, mesh_fname=None, results_fname=None, verbose=True):
     savedir = '/'
 
+    # -------- get data from the files -------------------------------
     # get the pre-ghostified mesh
     curr_mesh = Mesh(mesh_core_dimensions)
     curr_mesh.read(mesh_fname)
@@ -320,8 +321,56 @@ def plot_results_pv(mesh_core_dimensions=None, mesh_fname=None, results_fname=No
     v = np.divide(df['rho_v'].to_numpy().reshape(data_dimensions), rho)
     E = np.divide(df['rho_E'].to_numpy().reshape(data_dimensions), rho)
 
-    captions = ['Density', 'x velocity', 'y velocity', 'Energy']
-    datas = [rho, u, v, E]
+
+
+
+    # -------- quiver-plot velocities -------------------------------
+    grid = pv.StructuredGrid()
+    grid.dimensions = x.shape[1], x.shape[0], 1     # Set the dimensions of the grid
+    zip2 = lambda *x: np.array([i for i in zip(*x)])
+
+    # Create the points array with z coordinates as zeros
+    z_list = np.zeros_like(x.ravel())
+    points = np.stack((x.ravel(), y.ravel(), z_list), axis=-1)
+    
+    # Set the points of the grid
+    grid.points = points
+    x_centers = np.array([[0.5*(x[j,i]+x[j,i+1]) for i in range(np.shape(x)[1]-1)] for j in range(np.shape(x)[0]-1)]).ravel()
+    y_centers = np.array([[0.5*(y[j,i]+y[j+1,i]) for i in range(np.shape(x)[1]-1)] for j in range(np.shape(x)[0]-1)]).ravel()
+
+    # x_centers = np.array([[0.5(x_list[j,i]+x_list[j,i+1]) for j in range(np.shape(x_list)[0]-1)]])
+    u = u.ravel()
+    v = v.ravel()
+
+    speeds = np.pow(np.pow(u, 2) + np.pow(v, 2), 0.5).reshape(np.shape(x)[0]-1, np.shape(y)[1]-1) # plot
+    grid.cell_data['velocities'] = speeds.ravel()
+    
+    # Visualize the mesh
+    plotter = pv.Plotter(off_screen=(not verbose))
+    plotter.add_mesh(grid, scalars='velocities', cmap='plasma', show_edges=True) # cmaps = plasma, viridis
+    
+    centers = np.array(zip2(x_centers, y_centers, np.zeros_like(x_centers)))
+    velocities = np.array(zip2(u, v, np.zeros_like(u)))
+    plotter.add_arrows(centers, velocities, mag=0.1/np.max(speeds.ravel()))
+    plotter.camera_position = 'xy'
+    plotter.show_axes()
+
+    # give output
+    if not verbose:
+        plotter.screenshot(f'velocities.png')
+    elif verbose:
+        plotter.show()
+
+    plotter.close()
+    del plotter
+
+
+
+
+    # ------------------ Plot scalars  ------------------
+    # TODO: add other scalars: temperature, pressure, machs
+    captions = ['Density', 'Energy']
+    datas = [rho, E]
     for data, caption in zip(datas, captions):
 
         # Create a 2D structured grid object
@@ -387,7 +436,7 @@ def main():
         for mach in machs:
             results_fname = f'results_sh={c_dim[0]}x{c_dim[1]} M={mach}.csv'
 
-            run(mesh_core_dimensions=c_dim, mach=mach, results_fname=results_fname, mesh_fname=mesh_fname)
+            # run(mesh_core_dimensions=c_dim, mach=mach, results_fname=results_fname, mesh_fname=mesh_fname)
         
             # view results
             plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)
@@ -408,4 +457,4 @@ def test_main():
     plot_results_pv(mesh_core_dimensions=(2,1), mesh_fname='test.csv', results_fname='output.csv')
 
 if __name__ == "__main__":
-    test_main()
+    main()

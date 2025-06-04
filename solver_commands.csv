@@ -1,2 +1,2 @@
 ,i_max,j_max,t_infty,p_infty,mach_infty,mesh_fname,res_fname
-0,6,5,300.0,101325.0,0.5,test.csv,output.csv
+0,14,54,300.0,101325.0,0.3,mesh_sh=10x50.csv,results_sh=10x50 M=0.3.csv
