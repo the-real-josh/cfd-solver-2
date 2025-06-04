@@ -9,6 +9,7 @@
 using arrayD3 = std::vector<std::vector<std::vector<float>>>;
 using arrayD2 = std::vector<std::vector<float>>;
 
+#define CFL 1.0
 #define R 287.052
 #define pi 3.1415
 #define gamma 1.4
@@ -36,6 +37,7 @@ class Solution {
     public:
         // variables
         float ag_res;                                       // aggregate residual
+        int iteration_count;
 
         void innit(arrayD3 _mesh_data);            // take in mesh data and initialize the state
         void iterate();                                     // do 1 time-step
@@ -46,9 +48,14 @@ class Solution {
         arrayD3 mesh_data;                      // private - do not touch my data.
         arrayD3 q;                              // 3D state array (for debugging)
         arrayD3 new_q;
+        arrayD3 f;
+        arrayD3 g;
+        
         // private functions (internal workings)
 
-        void boundary_conditions();               // enforce boundary conditions
+        void update_BCs();               // enforce boundary conditions
+        void update_f();
+        void update_g();
 
         // simple state getters
         float p(int j, int i);                  // get pressure at a cell
