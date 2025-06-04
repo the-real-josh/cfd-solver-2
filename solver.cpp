@@ -25,9 +25,9 @@ void Solution::innit(arrayD3 _mesh_data) {
         for (int j = 0; j<=j_max-1; j++) {
                 q[i][j] = std::vector<float>{
                     static_cast<float>(p_infty / (R * t_infty)), // solve for density
-                    static_cast<float>((p_infty / (R * t_infty)) * (mach_infty * sqrt(1.4*R*t_infty))),
+                    static_cast<float>((p_infty / (R * t_infty)) * (mach_infty * sqrt(gamma*R*t_infty))),
                     0.0f,
-                    static_cast<float>(0.5*pow(mach_infty * sqrt(1.4*R*t_infty), 2) + (cv*t_infty))
+                    static_cast<float>((p_infty/(R*t_infty))*(0.5*pow(mach_infty * sqrt(gamma*R*t_infty), 2) + (cv*t_infty)))
                 };
         }
     }
@@ -106,10 +106,10 @@ void Solution::boundary_conditions() {
 
     // inlet boundary condition (compiles and runs good)
     std::vector<float> q_inlet = {
-        static_cast<float>(p_infty/(R*t_infty)),
-        static_cast<float>(mach_infty*sqrt(gamma*R*t_infty)),
-        0.0f,
-        static_cast<float>(cv*t_infty + 0.5*pow(mach_infty*sqrt(gamma*R*t_infty), 2))
+        static_cast<float>(p_infty/(R*t_infty)),                                         // rho
+        static_cast<float>((p_infty/(R*t_infty))*(mach_infty*sqrt(gamma*R*t_infty))),    // rho*u
+        0.0f,                                                                            // rho*v
+        static_cast<float>((p_infty/(R*t_infty))*(cv*t_infty + 0.5*pow(mach_infty*sqrt(gamma*R*t_infty), 2)))    // rho*E
     };
     for (int i = 0; i < i_max;/*< because nodes->cells*/ i++) {
         q[i][0] = q_inlet;
@@ -125,9 +125,8 @@ void Solution::boundary_conditions() {
                 std::cout << el << "\n";
             }
 
-
             wall_vec = {mesh_data[2][j+1][0] - mesh_data[2][j][0],
-                                             mesh_data[2][j+1][1] - mesh_data[2][j][1]}; // vector parallel with the wall element
+                        mesh_data[2][j+1][1] - mesh_data[2][j][1]}; // vector parallel with the wall element
 
             std::cout << "\nwall element tangent vector between nodes 2," << j << " and " << "2," << j+1 << "\n"; 
             for (auto& el: wall_vec) {
@@ -135,8 +134,8 @@ void Solution::boundary_conditions() {
             }
 
             wall_norm = {static_cast<float>(-wall_vec[1] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2))),
-                                            static_cast<float>( wall_vec[0] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2)))}; // perpendicular, inward-pointing unit vector that is normal to the border wall element
-            v_dot_n = boundary_velocity[0]*wall_norm[0] + boundary_velocity[1]*wall_norm[1];
+                         static_cast<float>( wall_vec[0] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2)))}; // perpendicular, inward-pointing unit vector that is normal to the border wall element
+            v_dot_n = boundary_velocity[0]*wall_norm[0] + boundary_velocity[1]*wall_norm[1]; // the magnitude of the velocity component going into the wall
             
             std::cout << "\nwall normal vector at 2," << j << "\n"; 
             for (auto& el: wall_norm) {
@@ -145,8 +144,8 @@ void Solution::boundary_conditions() {
             
             q[1][j] = {
                 q[2][j][0],
-                static_cast<float>(q[2][j][1] + 2*wall_norm[0]*v_dot_n),
-                static_cast<float>(q[2][j][2] + 2*wall_norm[1]*v_dot_n),
+                static_cast<float>(q[2][j][1] - 2*wall_norm[0]*v_dot_n),
+                static_cast<float>(q[2][j][2] - 2*wall_norm[1]*v_dot_n),
                 q[2][j][3]
             };
 
@@ -155,14 +154,14 @@ void Solution::boundary_conditions() {
         // upper
             boundary_velocity = {q[i_max-3][j][1]/q[i_max-3][j][0], q[i_max-3][j][2]/q[i_max-3][j][0]}; // velocity of the boundary cell associated with the inner ghost (outer boundary)
             wall_vec = {mesh_data[i_max-2][j+1][0] - mesh_data[i_max-2][j][0],
-                                             mesh_data[i_max-2][j+1][1] - mesh_data[i_max-2][j][1]}; // vector parallel with the wall element
+                        mesh_data[i_max-2][j+1][1] - mesh_data[i_max-2][j][1]}; // vector parallel with the wall element
             wall_norm = {static_cast<float>( wall_vec[1] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2))),
-                                            static_cast<float>(-wall_vec[0] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2)))}; // perpendicular, inward-pointing unit vector that is normal to the border wall element
+                         static_cast<float>(-wall_vec[0] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2)))}; // perpendicular, inward-pointing unit vector that is normal to the border wall element
             v_dot_n = boundary_velocity[0]*wall_norm[0] + boundary_velocity[1]*wall_norm[0];
             q[i_max-2][j] = {
                 q[i_max-3][j][0],
-                static_cast<float>(q[i_max-3][j][1] + 2*wall_norm[0]*v_dot_n),
-                static_cast<float>(q[i_max-3][j][2] + 2*wall_norm[1]*v_dot_n),
+                static_cast<float>(q[i_max-3][j][1] - 2*wall_norm[0]*v_dot_n),
+                static_cast<float>(q[i_max-3][j][2] - 2*wall_norm[1]*v_dot_n),
                 q[i_max-3][j][3]
             };
 

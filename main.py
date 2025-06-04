@@ -436,7 +436,7 @@ def main():
         for mach in machs:
             results_fname = f'results_sh={c_dim[0]}x{c_dim[1]} M={mach}.csv'
 
-            # run(mesh_core_dimensions=c_dim, mach=mach, results_fname=results_fname, mesh_fname=mesh_fname)
+            run(mesh_core_dimensions=c_dim, mach=mach, results_fname=results_fname, mesh_fname=mesh_fname)
         
             # view results
             plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)
