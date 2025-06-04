@@ -43,26 +43,26 @@ void Solution::innit(arrayD3 _mesh_data) {
 }
 
 // simple state getters
-float Solution::p(int j, int i) {
+float Solution::p(int i, int j) {
     std::cout << "Pressure getter reporting";
     return 0.0;
 }                 
-float Solution::T(int j, int i) {
+float Solution::T(int i, int j) {
     std::cout << "temperature getter reporting";
     return 0.0;
 }                 
-float Solution::rho(int j, int i) {
+float Solution::rho(int i, int j) {
     std::cout << "density getter reporting";
     return 0.0;
 }
-float Solution::e(int j, int i) {
+float Solution::e(int i, int j) {
     std::cout << "specific internal static energy getter reporting";
     return 0.0;
 }
 
 
 // internal functions
-float Solution::l(float j, float i) {
+float Solution::l(float i, float j) {
     // returns the length of a cell wall given the wall's index in off-integer notation
     std::cout << "length function reporting";
     // convert to wall-coordinates
@@ -70,7 +70,7 @@ float Solution::l(float j, float i) {
     // returns the length of a cell wall  
 }
 
-float Solution::lambda(float j, float i) {
+float Solution::lambda(float i, float j) {
     /* input: j and i in off-integer notation
      body:
          takes the velocity AT THE WALL (average) between the two cells
@@ -83,7 +83,7 @@ float Solution::lambda(float j, float i) {
     return 0.0;
 }
 
-float Solution::D(int j, int i) {
+std::vector<float> Solution::D(int i, int j) {
     float nu_2 {0.25};
     float nu_4 {0.002};
     /*input: 
@@ -95,7 +95,7 @@ float Solution::D(int j, int i) {
         total dissipations*/
     
     std::cout << "dissipation function reporting";
-    return 0.0;
+    return std::vector<float> {0.0f, 0.0f, 0.0f, 0.0f};
 }
 
 void Solution::update_BCs() {
@@ -226,7 +226,12 @@ void Solution::iterate() {
     // get iteration alpha constant
     constexpr float alpha_values[] = {0.25f, 0.3333334f, 0.5f, 1.0f};
     float alpha = alpha_values[iteration_count % 4];
+    float delta_t = 0.0001;
+
+    // allocations for calculation tools
     float area;
+    std::vector<float> res;
+    std::vector<float> curr_dissipation;
 
     // enforce the boundary conditions
     update_BCs();
@@ -243,15 +248,31 @@ void Solution::iterate() {
         // calcualte cell area
         area = 0.5*((mesh_data[i+1][j+1][0] - mesh_data[i][j][0])*(mesh_data[i+1][j][1] - mesh_data[i][j+1][1]) - 
                     (mesh_data[i+1][j+1][1] - mesh_data[i][j][1])*(mesh_data[i+1][j][0] - mesh_data[i][j+1][0]));
-        std::cout << "calculating area based on the cells with coords \n" << 
-        mesh_data[i+1][j+1][0] << "," << mesh_data[i+1][j+1][1] << "\n" << 
-        mesh_data[i+1][j][0] << "," << mesh_data[i+1][j][1] << "\n" << 
-        mesh_data[i][j][0] << "," << mesh_data[i][j][1] << "\n" << 
-        mesh_data[i][j+1][0] << "," << mesh_data[i][j+1][1] << "\n" <<
-        "resulting area: " << area << "\n";
+        // std::cout << "calculating area based on the cells with coords \n" << 
+        // mesh_data[i+1][j+1][0] << "," << mesh_data[i+1][j+1][1] << "\n" << 
+        // mesh_data[i+1][j][0] << "," << mesh_data[i+1][j][1] << "\n" << 
+        // mesh_data[i][j][0] << "," << mesh_data[i][j][1] << "\n" << 
+        // mesh_data[i][j+1][0] << "," << mesh_data[i][j+1][1] << "\n" <<
+        // "resulting area: " << area << "\n";
+        
+        // calculate residual
         // residual = fs*delta ys, gs*delta xs
-        // 
-        // calculate dissipation
+        for (int k = 0; k<3; k++) {
+            res[k] = 
+                static_cast<float>(0.5*(f[i][j][k] + f[i+1][j][k])*(mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1])  -   0.5*(g[i][j][k] + g[i+1][j][k])*(mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0])) +       // i+ in f and g, and i+1/2 in dy and dx
+                static_cast<float>(0.5*(f[i][j][k] + f[i][j+1][k])*(mesh_data[i+1][j+1][1]-mesh_data[i+1][j][1])  -   0.5*(g[i][j][k] + g[i][j+1][k])*(mesh_data[i+1][j+1][0]-mesh_data[i+1][j][0])) +       // j+
+                static_cast<float>(0.5*(f[i][j][k] + f[i-1][j][k])*(mesh_data[i+1][j][1]-mesh_data[i][j][1])      -   0.5*(g[i][j][k] + g[i-1][j][k])*(mesh_data[i+1][j][0]-mesh_data[i][j][0])) +           // i-
+                static_cast<float>(0.5*(f[i][j][k] + f[i][j-1][k])*(mesh_data[i+1][j][1]-mesh_data[i][j][1])      -   0.5*(g[i][j][k] + g[i][j+1][k])*(mesh_data[i+1][j+1][0]-mesh_data[i+1][j][0]));        // j-
+        }
+
+        // calculate dissipation $\vec D$
+        curr_dissipation = D(i,j);
+
+        // update q
+        for (int k = 0; k<3; k++) {
+            new_q[i][j][k] = CFL * delta_t * (1/area) * (res[k] - curr_dissipation[k]);
+        }
+
         // calculate time_step
         // update new_q
         system("pause");
@@ -259,7 +280,7 @@ void Solution::iterate() {
     }
 
 
-    // q = new_q;
+    q = new_q;
 
     iteration_count++; // update iteration counter
 }

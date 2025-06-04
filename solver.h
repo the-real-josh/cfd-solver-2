@@ -58,16 +58,16 @@ class Solution {
         void update_g();
 
         // simple state getters
-        float p(int j, int i);                  // get pressure at a cell
-        float T(int j, int i);                  // get temperature at a cell
-        float rho(int j, int i);                // get density at a cell
-        float e(int j, int i);                  // get specific internal static energy at a cell
+        float p(int i, int j);                  // get pressure at a cell
+        float T(int i, int j);                  // get temperature at a cell
+        float rho(int i, int j);                // get density at a cell
+        float e(int i, int j);                  // get specific internal static energy at a cell
     
         // advanced numerical finders
-        float l(float j, float i);              // length of cell wall (input off-integer values)
-        float lambda(float j, float i);         // eigenvalue of cell at the wall (input off-integer values)
+        float l(float i, float j);              // length of cell wall (input off-integer values)
+        float lambda(float i, float j);         // eigenvalue of cell at the wall (input off-integer values)
     
-        float D(int j, int i);              // dissipation at the cell
+        std::vector<float> D(int i, int j);              // dissipation at the cell
     };
 
 #endif
