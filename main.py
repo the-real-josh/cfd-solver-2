@@ -274,7 +274,7 @@ def mesh_plot(x_list, y_list, title='Mesh'):
     return squishedness/(i_ubound*j_ubound)
 
 
-def run(mesh_core_dimensions=None, mach=None, mesh_fname=None, results_fname=None):
+def run(mesh_core_dimensions=None, mach=None, mesh_fname=None, results_fname=None, max_iterations=100):
     """ - Edit a configuration file ("./solver_commands.csv")
         - call the solver: ./out/build/default/solver_engine.exe"""
 
@@ -287,7 +287,8 @@ def run(mesh_core_dimensions=None, mach=None, mesh_fname=None, results_fname=Non
     # NOTE about determining i_max and j_max from core dimensions.
     # +4 (see readme.txt#about cell indexing##converting)
     d = {'i_max': mesh_core_dimensions[0] + 4, 
-         'j_max': mesh_core_dimensions[1] + 4, 
+         'j_max': mesh_core_dimensions[1] + 4,
+         'max_iterations': max_iterations, 
          't_infty': T_infty,
          'p_infty': p_infty,
          'mach_infty': mach,
@@ -437,7 +438,11 @@ def main():
             results_fname = f'results_sh={c_dim[0]}x{c_dim[1]} M={mach}.csv'
 
             # put this back later
-            # run(mesh_core_dimensions=c_dim, mach=mach, results_fname=results_fname, mesh_fname=mesh_fname)
+            run(mesh_core_dimensions=c_dim,
+                 mach=mach,
+                   results_fname=results_fname,
+                     mesh_fname=mesh_fname,
+                     max_iterations=25)
         
             # for now, only view result.
             plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)

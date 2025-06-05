@@ -26,6 +26,7 @@ void save_data(arrayD3);
 // extern is supposed to fix this definition/declaration confusion?
 extern int i_max; // max index of the ghost nodes
 extern int j_max; // max index of the ghost nodes
+extern int max_iterations; // maximum number of iterations to perform
 extern float t_infty; // kelvin
 extern float p_infty; // pascals
 extern float mach_infty;

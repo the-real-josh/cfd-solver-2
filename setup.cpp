@@ -6,6 +6,7 @@
 // official declaration of config globals goes here.
 int i_max;
 int j_max;
+int max_iterations;
 float t_infty; // kelvin
 float p_infty; // pascals
 float mach_infty;
@@ -21,6 +22,7 @@ void get_config() {
 
     i_max = row["i_max"].get<int>();
     j_max = row["j_max"].get<int>();
+    max_iterations = row["max_iterations"].get<int>();
     t_infty = row["t_infty"].get<float>();
     p_infty = row["p_infty"].get<float>();
     mach_infty = row["mach_infty"].get<float>();

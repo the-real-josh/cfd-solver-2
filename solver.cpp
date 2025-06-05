@@ -172,7 +172,7 @@ void Solution::update_BCs() {
                         mesh_data[i_max-2][j+1][1] - mesh_data[i_max-2][j][1]}; // vector parallel with the wall element
             wall_norm = {static_cast<float>( wall_vec[1] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2))),
                          static_cast<float>(-wall_vec[0] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2)))}; // perpendicular, inward-pointing unit vector that is normal to the border wall element
-            v_dot_n = bdry_velocity[0]*wall_norm[0] + bdry_velocity[1]*wall_norm[0];
+            v_dot_n = bdry_velocity[0]*wall_norm[0] + bdry_velocity[1]*wall_norm[1];
             q[i_ghost][j] = {
                 q[i_bdry][j][0],
                 static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][1]/q[i_bdry][j][0] - 2*wall_norm[0]*v_dot_n)),
@@ -183,7 +183,7 @@ void Solution::update_BCs() {
             i_bdry = i_max-4;
             i_ghost = i_max-1; 
             bdry_velocity = {q[i_bdry][j][1]/q[i_bdry][j][0], q[i_bdry][j][2]/q[i_bdry][j][0]}; // velocity of the boundary cell associated with the inner ghost (outer boundary)
-            v_dot_n = bdry_velocity[0]*wall_norm[0] + bdry_velocity[1]*wall_norm[0];
+            v_dot_n = bdry_velocity[0]*wall_norm[0] + bdry_velocity[1]*wall_norm[1];
             q[i_ghost][j] = {
                 q[i_bdry][j][0],
                 static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][1]/q[i_bdry][j][0] - 2*wall_norm[0]*v_dot_n)),
@@ -285,12 +285,12 @@ void Solution::iterate() {
             // calculate residual
             // residual = fs*delta ys, gs*delta xs
             for (int k = 0; k<=3; k++) {
-                res[k] = 
-                    static_cast<float>(-0.5*(f[i][j][k] + f[i+1][j][k])*(mesh_data[i+1][j][1]-mesh_data[i+1][j+1][1])  +   0.5*(g[i][j][k] + g[i+1][j][k])*(mesh_data[i+1][j][0]-mesh_data[i+1][j+1][0])) +       // i+ in f and g, and i+1/2 in dy and dx
-                    static_cast<float>(-0.5*(f[i][j][k] + f[i][j+1][k])*(mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1])  +   0.5*(g[i][j][k] + g[i][j+1][k])*(mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0])) +       // j+
-                    static_cast<float>(-0.5*(f[i][j][k] + f[i-1][j][k])*(mesh_data[i][j+1][1]-mesh_data[i][j][1])      +   0.5*(g[i][j][k] + g[i-1][j][k])*(mesh_data[i][j+1][0]-mesh_data[i][j][0])) +           // i-
-                    static_cast<float>(-0.5*(f[i][j][k] + f[i][j-1][k])*(mesh_data[i][j][1]-mesh_data[i+1][j][1])      +   0.5*(g[i][j][k] + g[i][j+1][k])*(mesh_data[i][j][0]-mesh_data[i+1][j][0]));        // j-
-                }
+                res[k] =  static_cast<float>(0.5*(f[i][j][k] + f[i][j+1][k])*(mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1])  -   0.5*(g[i][j][k] + g[i][j+1][k])*(mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0]) +   // east
+                                             0.5*(f[i][j][k] + f[i+1][j][k])*(mesh_data[i+1][j][1]-mesh_data[i+1][j+1][1])  -   0.5*(g[i][j][k] + g[i+1][j][k])*(mesh_data[i+1][j][0]-mesh_data[i+1][j+1][0]) +     // north
+                                             0.5*(f[i][j][k] + f[i][j-1][k])*(mesh_data[i][j][1]-mesh_data[i+1][j][1])      -   0.5*(g[i][j][k] + g[i][j-1][k])*(mesh_data[i][j][0]-mesh_data[i+1][j][0]) +         // west
+                                             0.5*(f[i][j][k] + f[i-1][j][k])*(mesh_data[i][j+1][1]-mesh_data[i][j][1])      -   0.5*(g[i][j][k] + g[i-1][j][k])*(mesh_data[i][j+1][0]-mesh_data[i][j][0])           // south
+                );
+            }
 
             // BUG: res (or one of its coefficients) is zero.
 
