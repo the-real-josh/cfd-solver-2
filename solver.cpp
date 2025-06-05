@@ -41,7 +41,7 @@ void Solution::innit(arrayD3 _mesh_data) {
         }
     }
     update_BCs();
-    intermediate_q = q;
+    new_q = q;
 }
 
 // simple state getters
@@ -220,24 +220,25 @@ void Solution::update_BCs() {
     }
 }
 
-void Solution::update_f() {
-    // changed from being based on q to being based on intermediate_q
+void Solution::update_f_g() {
+    // changed from being based on q to being based on new_q
+    float p;
     for (int i = 0; i<i_max; i++) {
         for (int j = 0; j<j_max; j++) {
-            f[i][j][0] = static_cast<float>(intermediate_q[i][j][1]);
-            f[i][j][1] = static_cast<float>(intermediate_q[i][j][1]/intermediate_q[i][j][0] + intermediate_q[i][j][3]*(gamma-1));
-            f[i][j][2] = static_cast<float>(pow(intermediate_q[i][j][1], 2)*intermediate_q[i][j][2]/intermediate_q[i][j][0]);
-            f[i][j][3] = static_cast<float>(intermediate_q[i][j][3]*intermediate_q[i][j][1]*gamma/intermediate_q[i][j][0]);
-        }
-    }
-}
-void Solution::update_g() {
-    for (int i = 0; i<i_max; i++) {
-        for (int j = 0; j<j_max; j++) {
-            g[i][j][0] = static_cast<float>(intermediate_q[i][j][2]);
-            g[i][j][1] = static_cast<float>(intermediate_q[i][j][1]*intermediate_q[i][j][2]/intermediate_q[i][j][0]);
-            g[i][j][2] = static_cast<float>(pow(intermediate_q[i][j][2], 2)/intermediate_q[i][j][0] + intermediate_q[i][j][3]*(gamma-1));
-            g[i][j][3] = static_cast<float>(intermediate_q[i][j][3]*intermediate_q[i][j][2]*gamma / intermediate_q[i][j][0]);
+            // probably pressure? idk it's a horribly complex recurring constant
+            p = (new_q[i][j][3] - 0.5*(new_q[i][j][1]*new_q[i][j][1] + new_q[i][j][2]*new_q[i][j][2])/new_q[i][j][0]); 
+
+            // update f
+            f[i][j][0] = static_cast<float>(new_q[i][j][1]);
+            f[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][1]/new_q[i][j][0] + p*(gamma-1));
+            f[i][j][2] = static_cast<float>(new_q[i][j][1]*new_q[i][j][2]/new_q[i][j][0]);
+            f[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][1]/new_q[i][j][0] + p*(gamma-1)*(new_q[i][j][1]/new_q[i][j][0]));
+
+            // update g
+            g[i][j][0] = static_cast<float>(new_q[i][j][2]);
+            g[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][2]/new_q[i][j][0]);
+            g[i][j][2] = static_cast<float>(new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] + p*(gamma-1));
+            g[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][2]/new_q[i][j][0] + p*(new_q[i][j][2]/new_q[i][j][0]));
         }
     }
 }
@@ -262,10 +263,7 @@ void Solution::iterate() {
     std::vector<float> res(4, 0);
     std::vector<float> curr_dissipation(4, 0);
 
-
-    // calculate all f and g for the iteration
-    update_f(); 
-    update_g();
+    update_f_g(); // calculate all f and g for the iteration
 
     for (int i = 2; i<i_max-2; i++) { // start and end at 2, <i_max-2 because we do not generate a residual for ghost cells (BCs take care of that)
         for (int j = 2; j<j_max-2; j++) {
@@ -308,15 +306,15 @@ void Solution::iterate() {
 
             // update the new q
             for (int k = 0; k<3; k++) {
-                // intermediate_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
-                intermediate_q[i][j][k] = static_cast<float>(q[i][j][k] - (0.001) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
+                // new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
+                new_q[i][j][k] = static_cast<float>(q[i][j][k] - (0.001) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
             }
         }
     }
 
     // update q based on intermediate q
     if (iteration_count%4 == 3) {
-        q = intermediate_q;              // update inner cells based on inner calculations
+        q = new_q;              // update inner cells based on inner calculations
         update_BCs();           // update the boundary conditions to match inner calculations
     } else {
         // may need to update the intermediate q's boundary conditions here

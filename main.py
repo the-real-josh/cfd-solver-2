@@ -442,7 +442,7 @@ def main():
                  mach=mach,
                    results_fname=results_fname,
                      mesh_fname=mesh_fname,
-                     max_iterations=25)
+                     max_iterations=250)
         
             # for now, only view result.
             plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)

@@ -48,15 +48,14 @@ class Solution {
         // private data
         arrayD3 mesh_data;                      // private - do not touch my data.
         arrayD3 q;                              // 3D state array
-        arrayD3 intermediate_q;                 // 3D state array for intermediate (RK45 iterations)
+        arrayD3 new_q;                 // 3D state array for intermediate (RK45 iterations)
         arrayD3 f;
         arrayD3 g;
         
         // private functions (internal workings)
 
         void update_BCs();               // enforce boundary conditions
-        void update_f();
-        void update_g();
+        void update_f_g();
 
         // simple state getters
         float p(int i, int j);                  // get pressure at a cell
