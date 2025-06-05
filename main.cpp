@@ -13,7 +13,7 @@ int main() {
     sol.innit(mesh_data);
 
     // run the solver
-    for (int i = 0; i<=4; i++) {
+    for (int i = 0; i<=10; i++) {
         sol.iterate();
     }
 

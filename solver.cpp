@@ -149,8 +149,8 @@ void Solution::update_BCs() {
             v_dot_n = bdry_velocity[0]*wall_norm[0] + bdry_velocity[1]*wall_norm[1]; // the magnitude of the velocity component going into the wall       
             q[i_ghost][j] = {
                 q[i_bdry][j][0],
-                static_cast<float>(q[i_bdry][j][1] - 2*wall_norm[0]*v_dot_n),
-                static_cast<float>(q[i_bdry][j][2] - 2*wall_norm[1]*v_dot_n),
+                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][1]/q[i_bdry][j][0] - 2*wall_norm[0]*v_dot_n)),
+                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][2]/q[i_bdry][j][0] - 2*wall_norm[1]*v_dot_n)),
                 q[i_bdry][j][3]
             };
         // outer-lower
@@ -160,8 +160,8 @@ void Solution::update_BCs() {
             v_dot_n = bdry_velocity[0]*wall_norm[0] + bdry_velocity[1]*wall_norm[1]; // the magnitude of the velocity component going into the wall       
             q[i_ghost][j] = {
                 q[i_bdry][j][0],
-                static_cast<float>(q[i_bdry][j][1] - 2*wall_norm[0]*v_dot_n),
-                static_cast<float>(q[i_bdry][j][2] - 2*wall_norm[1]*v_dot_n),
+                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][1]/q[i_bdry][j][0] - 2*wall_norm[0]*v_dot_n)),
+                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][2]/q[i_bdry][j][0] - 2*wall_norm[1]*v_dot_n)),
                 q[i_bdry][j][3]
             };
         // inner-upper
@@ -175,8 +175,8 @@ void Solution::update_BCs() {
             v_dot_n = bdry_velocity[0]*wall_norm[0] + bdry_velocity[1]*wall_norm[0];
             q[i_ghost][j] = {
                 q[i_bdry][j][0],
-                static_cast<float>(q[i_bdry][j][1] - 2*wall_norm[0]*v_dot_n),
-                static_cast<float>(q[i_bdry][j][2] - 2*wall_norm[1]*v_dot_n),
+                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][1]/q[i_bdry][j][0] - 2*wall_norm[0]*v_dot_n)),
+                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][2]/q[i_bdry][j][0] - 2*wall_norm[1]*v_dot_n)),
                 q[i_bdry][j][3]
             };
         // outer-upper
@@ -186,10 +186,10 @@ void Solution::update_BCs() {
             v_dot_n = bdry_velocity[0]*wall_norm[0] + bdry_velocity[1]*wall_norm[0];
             q[i_ghost][j] = {
                 q[i_bdry][j][0],
-                static_cast<float>(q[i_bdry][j][1] - 2*wall_norm[0]*v_dot_n),
-                static_cast<float>(q[i_bdry][j][2] - 2*wall_norm[1]*v_dot_n),
+                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][1]/q[i_bdry][j][0] - 2*wall_norm[0]*v_dot_n)),
+                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][2]/q[i_bdry][j][0] - 2*wall_norm[1]*v_dot_n)),
                 q[i_bdry][j][3]
-            };         
+            };        
     }
 
     // outlet boundary condition
@@ -228,8 +228,6 @@ void Solution::update_f() {
             f[i][j][1] = static_cast<float>(intermediate_q[i][j][1]/intermediate_q[i][j][0] + intermediate_q[i][j][3]*(gamma-1));
             f[i][j][2] = static_cast<float>(pow(intermediate_q[i][j][1], 2)*intermediate_q[i][j][2]/intermediate_q[i][j][0]);
             f[i][j][3] = static_cast<float>(intermediate_q[i][j][3]*intermediate_q[i][j][1]*gamma/intermediate_q[i][j][0]);
-            std::cout << f[i][j][0] << "\n";
-            system("pause");
         }
     }
 }
@@ -245,6 +243,7 @@ void Solution::update_g() {
 }
 
 arrayD3 Solution::get_q() {
+    update_BCs(); // ensures boundary conditions are satisfied when the solution is returned.
     return q;
 }
 
@@ -287,10 +286,10 @@ void Solution::iterate() {
             // residual = fs*delta ys, gs*delta xs
             for (int k = 0; k<=3; k++) {
                 res[k] = 
-                    static_cast<float>(0.5*(f[i][j][k] + f[i+1][j][k])*(mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1])  -   0.5*(g[i][j][k] + g[i+1][j][k])*(mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0])) +       // i+ in f and g, and i+1/2 in dy and dx
-                    static_cast<float>(0.5*(f[i][j][k] + f[i][j+1][k])*(mesh_data[i+1][j+1][1]-mesh_data[i+1][j][1])  -   0.5*(g[i][j][k] + g[i][j+1][k])*(mesh_data[i+1][j+1][0]-mesh_data[i+1][j][0])) +       // j+
-                    static_cast<float>(0.5*(f[i][j][k] + f[i-1][j][k])*(mesh_data[i+1][j][1]-mesh_data[i][j][1])      -   0.5*(g[i][j][k] + g[i-1][j][k])*(mesh_data[i+1][j][0]-mesh_data[i][j][0])) +           // i-
-                    static_cast<float>(0.5*(f[i][j][k] + f[i][j-1][k])*(mesh_data[i+1][j][1]-mesh_data[i][j][1])      -   0.5*(g[i][j][k] + g[i][j+1][k])*(mesh_data[i+1][j+1][0]-mesh_data[i+1][j][0]));        // j-
+                    static_cast<float>(-0.5*(f[i][j][k] + f[i+1][j][k])*(mesh_data[i+1][j][1]-mesh_data[i+1][j+1][1])  +   0.5*(g[i][j][k] + g[i+1][j][k])*(mesh_data[i+1][j][0]-mesh_data[i+1][j+1][0])) +       // i+ in f and g, and i+1/2 in dy and dx
+                    static_cast<float>(-0.5*(f[i][j][k] + f[i][j+1][k])*(mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1])  +   0.5*(g[i][j][k] + g[i][j+1][k])*(mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0])) +       // j+
+                    static_cast<float>(-0.5*(f[i][j][k] + f[i-1][j][k])*(mesh_data[i][j+1][1]-mesh_data[i][j][1])      +   0.5*(g[i][j][k] + g[i-1][j][k])*(mesh_data[i][j+1][0]-mesh_data[i][j][0])) +           // i-
+                    static_cast<float>(-0.5*(f[i][j][k] + f[i][j-1][k])*(mesh_data[i][j][1]-mesh_data[i+1][j][1])      +   0.5*(g[i][j][k] + g[i][j+1][k])*(mesh_data[i][j][0]-mesh_data[i+1][j][0]));        // j-
                 }
 
             // BUG: res (or one of its coefficients) is zero.
@@ -310,7 +309,7 @@ void Solution::iterate() {
             // update the new q
             for (int k = 0; k<3; k++) {
                 // intermediate_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
-                intermediate_q[i][j][k] = static_cast<float>(q[i][j][k] - (0.01) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
+                intermediate_q[i][j][k] = static_cast<float>(q[i][j][k] - (0.001) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
             }
         }
     }
