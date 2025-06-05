@@ -40,8 +40,8 @@ void Solution::innit(arrayD3 _mesh_data) {
                 g[i][j] = std::vector<float> {0.0f, 0.0f, 0.0f, 0.0f};
         }
     }
-    update_BCs();
     new_q = q;
+    update_BCs();
 }
 
 // simple state getters
@@ -108,7 +108,6 @@ void Solution::update_BCs() {
         edits q such that boundary conditions are enforced
     output: 
         None*/
-    std::cout << "Enforcing Boundary Conditions\n";
 
     // temporary variables for enforcement
     std::vector<float> bdry_velocity(2, 0.0f);
@@ -127,13 +126,13 @@ void Solution::update_BCs() {
         static_cast<float>((p_infty/(R*t_infty))*(cv*t_infty + 0.5*pow(mach_infty*sqrt(gamma*R*t_infty), 2)))   // rho*E
     };
 
+
     for (int i = 0; i < i_max;/*< because nodes->cells*/ i++) {
         for (int j = 0; j<=1; j++) {
             for (int k = 0; k<=3; k++) {
-                q[i][j][k] = q_inlet[k];
+                new_q[i][j][k] = q_inlet[k];
             }
         }
-        // needs to be j=0 and j=1, not just j=0
     }
 
     // no penetration wall boundary condition (using ghost cells)
@@ -141,56 +140,58 @@ void Solution::update_BCs() {
         // inner-lower
             i_bdry = 2;
             i_ghost = 1;
-            bdry_velocity = {q[i_bdry][j][1]/q[i_bdry][j][0], q[i_bdry][j][2]/q[i_bdry][j][0]}; // velocity of the boundary cell associated with the inner ghost (outer boundary)
+            bdry_velocity = {new_q[i_bdry][j][1]/new_q[i_bdry][j][0], new_q[i_bdry][j][2]/new_q[i_bdry][j][0]}; // velocity of the boundary cell associated with the inner ghost (outer boundary)
             wall_vec = {mesh_data[2][j+1][0] - mesh_data[2][j][0],
                         mesh_data[2][j+1][1] - mesh_data[2][j][1]}; // vector parallel with the wall element
             wall_norm = {static_cast<float>(-wall_vec[1] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2))),
                          static_cast<float>( wall_vec[0] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2)))}; // perpendicular, inward-pointing unit vector that is normal to the border wall element
             v_dot_n = bdry_velocity[0]*wall_norm[0] + bdry_velocity[1]*wall_norm[1]; // the magnitude of the velocity component going into the wall       
-            q[i_ghost][j] = {
-                q[i_bdry][j][0],
-                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][1]/q[i_bdry][j][0] - 2*wall_norm[0]*v_dot_n)),
-                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][2]/q[i_bdry][j][0] - 2*wall_norm[1]*v_dot_n)),
-                q[i_bdry][j][3]
+            new_q[i_ghost][j] = {
+                new_q[i_bdry][j][0],
+                static_cast<float>(new_q[i_bdry][j][0]*(new_q[i_bdry][j][1]/new_q[i_bdry][j][0] - 2*wall_norm[0]*v_dot_n)),
+                static_cast<float>(new_q[i_bdry][j][0]*(new_q[i_bdry][j][2]/new_q[i_bdry][j][0] - 2*wall_norm[1]*v_dot_n)),
+                new_q[i_bdry][j][3]
             };
         // outer-lower
             i_bdry = 3;
             i_ghost = 0;
-            bdry_velocity = {q[i_bdry][j][1]/q[i_bdry][j][0], q[i_bdry][j][2]/q[i_bdry][j][0]}; // velocity of the boundary cell associated with the inner ghost (outer boundary)
+            bdry_velocity = {new_q[i_bdry][j][1]/new_q[i_bdry][j][0], new_q[i_bdry][j][2]/new_q[i_bdry][j][0]}; // velocity of the boundary cell associated with the inner ghost (outer boundary)
             v_dot_n = bdry_velocity[0]*wall_norm[0] + bdry_velocity[1]*wall_norm[1]; // the magnitude of the velocity component going into the wall       
-            q[i_ghost][j] = {
-                q[i_bdry][j][0],
-                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][1]/q[i_bdry][j][0] - 2*wall_norm[0]*v_dot_n)),
-                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][2]/q[i_bdry][j][0] - 2*wall_norm[1]*v_dot_n)),
-                q[i_bdry][j][3]
+            new_q[i_ghost][j] = {
+                new_q[i_bdry][j][0],
+                static_cast<float>(new_q[i_bdry][j][0]*(new_q[i_bdry][j][1]/new_q[i_bdry][j][0] - 2*wall_norm[0]*v_dot_n)),
+                static_cast<float>(new_q[i_bdry][j][0]*(new_q[i_bdry][j][2]/new_q[i_bdry][j][0] - 2*wall_norm[1]*v_dot_n)),
+                new_q[i_bdry][j][3]
             };
         // inner-upper
             i_bdry = i_max-3;
             i_ghost = i_max-2; 
-            bdry_velocity = {q[i_bdry][j][1]/q[i_bdry][j][0], q[i_bdry][j][2]/q[i_bdry][j][0]}; // velocity of the boundary cell associated with the inner ghost (outer boundary)
+            bdry_velocity = {new_q[i_bdry][j][1]/new_q[i_bdry][j][0], new_q[i_bdry][j][2]/new_q[i_bdry][j][0]}; // velocity of the boundary cell associated with the inner ghost (outer boundary)
             wall_vec = {mesh_data[i_max-2][j+1][0] - mesh_data[i_max-2][j][0],
                         mesh_data[i_max-2][j+1][1] - mesh_data[i_max-2][j][1]}; // vector parallel with the wall element
             wall_norm = {static_cast<float>( wall_vec[1] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2))),
                          static_cast<float>(-wall_vec[0] / sqrt(pow(wall_vec[0], 2)+pow(wall_vec[1], 2)))}; // perpendicular, inward-pointing unit vector that is normal to the border wall element
             v_dot_n = bdry_velocity[0]*wall_norm[0] + bdry_velocity[1]*wall_norm[1];
-            q[i_ghost][j] = {
-                q[i_bdry][j][0],
-                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][1]/q[i_bdry][j][0] - 2*wall_norm[0]*v_dot_n)),
-                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][2]/q[i_bdry][j][0] - 2*wall_norm[1]*v_dot_n)),
-                q[i_bdry][j][3]
+            new_q[i_ghost][j] = {
+                new_q[i_bdry][j][0],
+                static_cast<float>(new_q[i_bdry][j][0]*(new_q[i_bdry][j][1]/new_q[i_bdry][j][0] - 2*wall_norm[0]*v_dot_n)),
+                static_cast<float>(new_q[i_bdry][j][0]*(new_q[i_bdry][j][2]/new_q[i_bdry][j][0] - 2*wall_norm[1]*v_dot_n)),
+                new_q[i_bdry][j][3]
             };
         // outer-upper
             i_bdry = i_max-4;
             i_ghost = i_max-1; 
-            bdry_velocity = {q[i_bdry][j][1]/q[i_bdry][j][0], q[i_bdry][j][2]/q[i_bdry][j][0]}; // velocity of the boundary cell associated with the inner ghost (outer boundary)
+            bdry_velocity = {new_q[i_bdry][j][1]/new_q[i_bdry][j][0], new_q[i_bdry][j][2]/new_q[i_bdry][j][0]}; // velocity of the boundary cell associated with the inner ghost (outer boundary)
             v_dot_n = bdry_velocity[0]*wall_norm[0] + bdry_velocity[1]*wall_norm[1];
-            q[i_ghost][j] = {
-                q[i_bdry][j][0],
-                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][1]/q[i_bdry][j][0] - 2*wall_norm[0]*v_dot_n)),
-                static_cast<float>(q[i_bdry][j][0]*(q[i_bdry][j][2]/q[i_bdry][j][0] - 2*wall_norm[1]*v_dot_n)),
-                q[i_bdry][j][3]
+            new_q[i_ghost][j] = {
+                new_q[i_bdry][j][0],
+                static_cast<float>(new_q[i_bdry][j][0]*(new_q[i_bdry][j][1]/new_q[i_bdry][j][0] - 2*wall_norm[0]*v_dot_n)),
+                static_cast<float>(new_q[i_bdry][j][0]*(new_q[i_bdry][j][2]/new_q[i_bdry][j][0] - 2*wall_norm[1]*v_dot_n)),
+                new_q[i_bdry][j][3]
             };        
     }
+
+
 
     // outlet boundary condition
     /*Energy boundary condition:
@@ -211,11 +212,11 @@ void Solution::update_BCs() {
     for (int i=2; i<i_max-2; i++) {
         for (int j=j_max-2; j<=j_max-1; j++) {
             for (int k=0; k<=3; k++) {
-                q[i][j][k] = static_cast<float>(2*q[i][j_max-4][k] - q[i][j_max-3][k]); 
+                new_q[i][j][k] = static_cast<float>(2*new_q[i][j_max-4][k] - new_q[i][j_max-3][k]); 
                 // change the j_max-4 for j-2 and j_max-3 for j-1 if you want to make it constant gradient instead of zero gradient
             }
-            exit_v_mag_squared = pow(q[i][j][1], 2) + pow(q[i][j][2], 2) / pow(q[i][j][0], 2);
-            q[i][j][3] = static_cast<float>(p_infty / (gamma-1) + q[i][j][0]*(0.5*exit_v_mag_squared)); // calculate rho*E
+            exit_v_mag_squared = pow(new_q[i][j][1], 2) + pow(new_q[i][j][2], 2) / pow(new_q[i][j][0], 2);
+            new_q[i][j][3] = static_cast<float>(p_infty / (gamma-1) + new_q[i][j][0]*(0.5*exit_v_mag_squared)); // calculate rho*E
         }
     }
 }
@@ -238,13 +239,12 @@ void Solution::update_f_g() {
             g[i][j][0] = static_cast<float>(new_q[i][j][2]);
             g[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][2]/new_q[i][j][0]);
             g[i][j][2] = static_cast<float>(new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] + p*(gamma-1));
-            g[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][2]/new_q[i][j][0] + p*(new_q[i][j][2]/new_q[i][j][0]));
+            g[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][2]/new_q[i][j][0] + p*(gamma-1)*(new_q[i][j][2]/new_q[i][j][0]));
         }
     }
 }
 
 arrayD3 Solution::get_q() {
-    update_BCs(); // ensures boundary conditions are satisfied when the solution is returned.
     return q;
 }
 
@@ -300,7 +300,7 @@ void Solution::iterate() {
             sum_l_lamb = 0.0f;
             // for (float i_adder = -1/2; i_adder <= 0.51; i_adder+=1/2) {
             //     for (float j_adder = -1/2; j_adder <= 0.51; j_adder+=1/2) {
-            //         s += static_cast<float>(lambda(i+i_adder, j+j_adder) * l(i+i_adder, j+j_adder));
+            //         sum_l_lamb += static_cast<float>(lambda(i+i_adder, j+j_adder) * l(i+i_adder, j+j_adder));
             //     }
             // }
 
@@ -312,12 +312,11 @@ void Solution::iterate() {
         }
     }
 
+    update_BCs();           // update the boundary conditions to match inner calculations
+
     // update q based on intermediate q
     if (iteration_count%4 == 3) {
         q = new_q;              // update inner cells based on inner calculations
-        update_BCs();           // update the boundary conditions to match inner calculations
-    } else {
-        // may need to update the intermediate q's boundary conditions here
     }
 
     // key difference between this code and the python - is the main q updated every time
