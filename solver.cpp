@@ -41,7 +41,7 @@ void Solution::innit(arrayD3 _mesh_data) {
         }
     }
     update_BCs();
-    new_q = q;
+    intermediate_q = q;
 }
 
 // simple state getters
@@ -79,6 +79,8 @@ float Solution::lambda(float i, float j) {
          takes l = the wall normal of the velocity
      returns:
          l
+
+         key difference between this code and the python - need to calculate lambda based on velocity at the wall (average between cells)
     */
     std::cout << "lambda function reporting";
     // returns the eigenvalue at the cell
@@ -207,7 +209,7 @@ void Solution::update_BCs() {
     // no not apply zero gradient to energy. Calculate it with the exit pressure (subsonic) or the 
     float exit_v_mag_squared {0.0f};
     for (int i=2; i<i_max-2; i++) {
-        for (int j=i_max-2; j<=i_max-1; j++) {
+        for (int j=j_max-2; j<=j_max-1; j++) {
             for (int k=0; k<=3; k++) {
                 q[i][j][k] = static_cast<float>(2*q[i][j_max-4][k] - q[i][j_max-3][k]); 
                 // change the j_max-4 for j-2 and j_max-3 for j-1 if you want to make it constant gradient instead of zero gradient
@@ -219,23 +221,25 @@ void Solution::update_BCs() {
 }
 
 void Solution::update_f() {
-    for (int i; i<i_max; i++) {
-        for (int j; j<j_max; j++) {
-            f[i][j][0] = static_cast<float>(q[i][j][1]);
-            f[i][j][1] = static_cast<float>(q[i][j][1]/q[i][j][0] + q[i][j][3]*(gamma-1));
-            f[i][j][2] = static_cast<float>(pow(q[i][j][1], 2)*q[i][j][2]/q[i][j][0]);
-            f[i][j][3] = static_cast<float>(q[i][j][3]*q[i][j][1]*gamma/q[i][j][0]);
+    // changed from being based on q to being based on intermediate_q
+    for (int i = 0; i<i_max; i++) {
+        for (int j = 0; j<j_max; j++) {
+            f[i][j][0] = static_cast<float>(intermediate_q[i][j][1]);
+            f[i][j][1] = static_cast<float>(intermediate_q[i][j][1]/intermediate_q[i][j][0] + intermediate_q[i][j][3]*(gamma-1));
+            f[i][j][2] = static_cast<float>(pow(intermediate_q[i][j][1], 2)*intermediate_q[i][j][2]/intermediate_q[i][j][0]);
+            f[i][j][3] = static_cast<float>(intermediate_q[i][j][3]*intermediate_q[i][j][1]*gamma/intermediate_q[i][j][0]);
+            std::cout << f[i][j][0] << "\n";
+            system("pause");
         }
     }
 }
-
 void Solution::update_g() {
-    for (int i; i<i_max; i++) {
-        for (int j; j<j_max; j++) {
-            g[i][j][0] = static_cast<float>(q[i][j][2]);
-            g[i][j][1] = static_cast<float>(q[i][j][1]*q[i][j][2]/q[i][j][0]);
-            g[i][j][2] = static_cast<float>(pow(q[i][j][2], 2)/q[i][j][0] + q[i][j][3]*(gamma-1));
-            g[i][j][3] = static_cast<float>(q[i][j][3]*q[i][j][2]*gamma / q[i][j][0]);
+    for (int i = 0; i<i_max; i++) {
+        for (int j = 0; j<j_max; j++) {
+            g[i][j][0] = static_cast<float>(intermediate_q[i][j][2]);
+            g[i][j][1] = static_cast<float>(intermediate_q[i][j][1]*intermediate_q[i][j][2]/intermediate_q[i][j][0]);
+            g[i][j][2] = static_cast<float>(pow(intermediate_q[i][j][2], 2)/intermediate_q[i][j][0] + intermediate_q[i][j][3]*(gamma-1));
+            g[i][j][3] = static_cast<float>(intermediate_q[i][j][3]*intermediate_q[i][j][2]*gamma / intermediate_q[i][j][0]);
         }
     }
 }
@@ -252,6 +256,7 @@ void Solution::iterate() {
     constexpr float alpha_values[] = {0.25f, 0.3333334f, 0.5f, 1.0f};
     float alpha = alpha_values[iteration_count % 4];
     float delta_t = 0.0001f;
+    float sum_l_lamb = 0.0f;
 
     // allocations for calculation tools
     float area;
@@ -265,47 +270,60 @@ void Solution::iterate() {
 
     for (int i = 2; i<i_max-2; i++) { // start and end at 2, <i_max-2 because we do not generate a residual for ghost cells (BCs take care of that)
         for (int j = 2; j<j_max-2; j++) {
-        
-        std::cout << "\n\nDEBUG: begin analysis of cell i,j= " << i << "," << j << "\n";
-        
-        // calcualte cell area
-        area = static_cast<float>(0.5*((mesh_data[i+1][j+1][0] - mesh_data[i][j][0])    *   (mesh_data[i+1][j][1] - mesh_data[i][j+1][1]) - 
-                                 (mesh_data[i+1][j+1][1] - mesh_data[i][j][1])          *   (mesh_data[i+1][j][0] - mesh_data[i][j+1][0])));
-        // std::cout << "calculating area based on the cells with coords \n" << 
-        // mesh_data[i+1][j+1][0] << "," << mesh_data[i+1][j+1][1] << "\n" << 
-        // mesh_data[i+1][j][0] << "," << mesh_data[i+1][j][1] << "\n" << 
-        // mesh_data[i][j][0] << "," << mesh_data[i][j][1] << "\n" << 
-        // mesh_data[i][j+1][0] << "," << mesh_data[i][j+1][1] << "\n" <<
-        // "resulting area: " << area << "\n";
+            
+            // std::cout << "DEBUG: begin analysis of cell i,j= " << i << "," << j << "\n";
+            
+            // calcualte cell area
+            area = static_cast<float>(0.5*((mesh_data[i+1][j+1][0] - mesh_data[i][j][0])    *   (mesh_data[i+1][j][1] - mesh_data[i][j+1][1]) - 
+                                    (mesh_data[i+1][j+1][1] - mesh_data[i][j][1])          *   (mesh_data[i+1][j][0] - mesh_data[i][j+1][0])));
+            // std::cout << "calculating area based on the cells with coords \n" << 
+            // mesh_data[i+1][j+1][0] << "," << mesh_data[i+1][j+1][1] << "\n" << 
+            // mesh_data[i+1][j][0] << "," << mesh_data[i+1][j][1] << "\n" << 
+            // mesh_data[i][j][0] << "," << mesh_data[i][j][1] << "\n" << 
+            // mesh_data[i][j+1][0] << "," << mesh_data[i][j+1][1] << "\n" <<
+            // "resulting area: " << area << "\n";
 
-        // calculate residual
-        // residual = fs*delta ys, gs*delta xs
-        for (int k = 0; k<3; k++) {
-            res[k] = 
-                static_cast<float>(0.5*(f[i][j][k] + f[i+1][j][k])*(mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1])  -   0.5*(g[i][j][k] + g[i+1][j][k])*(mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0])) +       // i+ in f and g, and i+1/2 in dy and dx
-                static_cast<float>(0.5*(f[i][j][k] + f[i][j+1][k])*(mesh_data[i+1][j+1][1]-mesh_data[i+1][j][1])  -   0.5*(g[i][j][k] + g[i][j+1][k])*(mesh_data[i+1][j+1][0]-mesh_data[i+1][j][0])) +       // j+
-                static_cast<float>(0.5*(f[i][j][k] + f[i-1][j][k])*(mesh_data[i+1][j][1]-mesh_data[i][j][1])      -   0.5*(g[i][j][k] + g[i-1][j][k])*(mesh_data[i+1][j][0]-mesh_data[i][j][0])) +           // i-
-                static_cast<float>(0.5*(f[i][j][k] + f[i][j-1][k])*(mesh_data[i+1][j][1]-mesh_data[i][j][1])      -   0.5*(g[i][j][k] + g[i][j+1][k])*(mesh_data[i+1][j+1][0]-mesh_data[i+1][j][0]));        // j-
-        }
+            // calculate residual
+            // residual = fs*delta ys, gs*delta xs
+            for (int k = 0; k<=3; k++) {
+                res[k] = 
+                    static_cast<float>(0.5*(f[i][j][k] + f[i+1][j][k])*(mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1])  -   0.5*(g[i][j][k] + g[i+1][j][k])*(mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0])) +       // i+ in f and g, and i+1/2 in dy and dx
+                    static_cast<float>(0.5*(f[i][j][k] + f[i][j+1][k])*(mesh_data[i+1][j+1][1]-mesh_data[i+1][j][1])  -   0.5*(g[i][j][k] + g[i][j+1][k])*(mesh_data[i+1][j+1][0]-mesh_data[i+1][j][0])) +       // j+
+                    static_cast<float>(0.5*(f[i][j][k] + f[i-1][j][k])*(mesh_data[i+1][j][1]-mesh_data[i][j][1])      -   0.5*(g[i][j][k] + g[i-1][j][k])*(mesh_data[i+1][j][0]-mesh_data[i][j][0])) +           // i-
+                    static_cast<float>(0.5*(f[i][j][k] + f[i][j-1][k])*(mesh_data[i+1][j][1]-mesh_data[i][j][1])      -   0.5*(g[i][j][k] + g[i][j+1][k])*(mesh_data[i+1][j+1][0]-mesh_data[i+1][j][0]));        // j-
+                }
 
-        // calculate dissipation $\vec D$
-        curr_dissipation = D(i, j);
-        for (auto &p : curr_dissipation) {
-            std::cout << p;
-        }
+            // BUG: res (or one of its coefficients) is zero.
 
-        // update the new q
-        for (int k = 0; k<3; k++) {
-            new_q[i][j][k] = CFL * delta_t * (1/area) * (res[k] - curr_dissipation[k]);
-        }
+            // calculate dissipation $\vec D$ every 4
+            if (iteration_count%4 == 0) {
+                curr_dissipation = D(i, j);
+            }
 
-        // calculate time_step
-        // update new_q
-        // system("pause");
+            sum_l_lamb = 0.0f;
+            // for (float i_adder = -1/2; i_adder <= 0.51; i_adder+=1/2) {
+            //     for (float j_adder = -1/2; j_adder <= 0.51; j_adder+=1/2) {
+            //         s += static_cast<float>(lambda(i+i_adder, j+j_adder) * l(i+i_adder, j+j_adder));
+            //     }
+            // }
+
+            // update the new q
+            for (int k = 0; k<3; k++) {
+                // intermediate_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
+                intermediate_q[i][j][k] = static_cast<float>(q[i][j][k] - (0.01) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
+            }
         }
     }
 
-    q = new_q;              // update inner cells based on inner calculations
-    update_BCs();           // update the boundary conditions to match inner calculations
+    // update q based on intermediate q
+    if (iteration_count%4 == 3) {
+        q = intermediate_q;              // update inner cells based on inner calculations
+        update_BCs();           // update the boundary conditions to match inner calculations
+    } else {
+        // may need to update the intermediate q's boundary conditions here
+    }
+
+    // key difference between this code and the python - is the main q updated every time
+
     iteration_count++;      // update iteration counter
 }

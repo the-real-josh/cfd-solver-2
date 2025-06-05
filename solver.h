@@ -46,8 +46,8 @@ class Solution {
     private:
         // private data
         arrayD3 mesh_data;                      // private - do not touch my data.
-        arrayD3 q;                              // 3D state array (for debugging)
-        arrayD3 new_q;
+        arrayD3 q;                              // 3D state array
+        arrayD3 intermediate_q;                 // 3D state array for intermediate (RK45 iterations)
         arrayD3 f;
         arrayD3 g;
         

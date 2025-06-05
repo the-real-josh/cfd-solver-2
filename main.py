@@ -430,15 +430,16 @@ def main():
             my_mesh.save(mesh_fname)
             my_mesh.plot()
 
-        my_mesh.plot()
+        # my_mesh.plot() # 
 
         # run solver
         for mach in machs:
             results_fname = f'results_sh={c_dim[0]}x{c_dim[1]} M={mach}.csv'
 
-            run(mesh_core_dimensions=c_dim, mach=mach, results_fname=results_fname, mesh_fname=mesh_fname)
+            # put this back later
+            # run(mesh_core_dimensions=c_dim, mach=mach, results_fname=results_fname, mesh_fname=mesh_fname)
         
-            # view results
+            # for now, only view result.
             plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)
 
 def test_main():
