@@ -40,6 +40,8 @@ void Solution::innit(arrayD3 _mesh_data) {
                 g[i][j] = std::vector<float> {0.0f, 0.0f, 0.0f, 0.0f};
         }
     }
+    update_BCs();
+    new_q = q;
 }
 
 // simple state getters
@@ -94,7 +96,6 @@ std::vector<float> Solution::D(int i, int j) {
     returns:
         total dissipations*/
     
-    std::cout << "dissipation function reporting";
     return std::vector<float> {0.0f, 0.0f, 0.0f, 0.0f};
 }
 
@@ -108,12 +109,13 @@ void Solution::update_BCs() {
     std::cout << "Enforcing Boundary Conditions\n";
 
     // temporary variables for enforcement
-    std::vector<float> bdry_velocity;
-    std::vector<float> wall_vec;
-    std::vector<float> wall_norm;
+    std::vector<float> bdry_velocity(2, 0.0f);
+    std::vector<float> wall_vec(2, 0.0f);
+    std::vector<float> wall_norm(2, 0.0f);
     float v_dot_n;
     int i_bdry;     // i value of the cell that is mirrored by the ghost cell (boundary cell)
     int i_ghost;    // i value of the ghost cell
+
 
     // inlet boundary condition 
     std::vector<float> q_inlet = {
@@ -122,8 +124,14 @@ void Solution::update_BCs() {
         0.0f,                                                                                                   // rho*v
         static_cast<float>((p_infty/(R*t_infty))*(cv*t_infty + 0.5*pow(mach_infty*sqrt(gamma*R*t_infty), 2)))   // rho*E
     };
+
     for (int i = 0; i < i_max;/*< because nodes->cells*/ i++) {
-        q[i][0] = q_inlet;
+        for (int j = 0; j<=1; j++) {
+            for (int k = 0; k<=3; k++) {
+                q[i][j][k] = q_inlet[k];
+            }
+        }
+        // needs to be j=0 and j=1, not just j=0
     }
 
     // no penetration wall boundary condition (using ghost cells)
@@ -187,19 +195,36 @@ void Solution::update_BCs() {
         do not apply zero gradient to energy
         If subsonic:
             get the exit pressure boundary condition (idk make it same as inlet)
-            If supersonic: Calculate it with the pressure right before the end of the domain (i_max - )*/
+            If supersonic: Calculate it with the pressure right before the end of the domain (i_max - )
+            
+        the python script made both ghost cells have the same value
+        
+        In cizmas's notes, he said that q'' is zero, not q', so it would imply that they have a constant "slope". Ask the TA.
+
+        In the Jameson paper, he said to say p = p_infty, and to do something with eigenvalues? He also says that there are other outer boundary conditions 
+        that have been proposed that are worth investigating. I guess if it isn't playing tennis with the inlet boundary then it's fine? 
+        */
     // no not apply zero gradient to energy. Calculate it with the exit pressure (subsonic) or the 
-
-
+    float exit_v_mag_squared {0.0f};
+    for (int i=2; i<i_max-2; i++) {
+        for (int j=i_max-2; j<=i_max-1; j++) {
+            for (int k=0; k<=3; k++) {
+                q[i][j][k] = static_cast<float>(2*q[i][j_max-4][k] - q[i][j_max-3][k]); 
+                // change the j_max-4 for j-2 and j_max-3 for j-1 if you want to make it constant gradient instead of zero gradient
+            }
+            exit_v_mag_squared = pow(q[i][j][1], 2) + pow(q[i][j][2], 2) / pow(q[i][j][0], 2);
+            q[i][j][3] = static_cast<float>(p_infty / (gamma-1) + q[i][j][0]*(0.5*exit_v_mag_squared)); // calculate rho*E
+        }
+    }
 }
 
 void Solution::update_f() {
     for (int i; i<i_max; i++) {
         for (int j; j<j_max; j++) {
-            f[i][j][0] = q[i][j][1];
-            f[i][j][1] = q[i][j][1]/q[i][j][0] + q[i][j][3]*(gamma-1);
-            f[i][j][2] = pow(q[i][j][1], 2)*q[i][j][2]/q[i][j][0];
-            f[i][j][3] = q[i][j][3]*q[i][j][1]*gamma/q[i][j][0];
+            f[i][j][0] = static_cast<float>(q[i][j][1]);
+            f[i][j][1] = static_cast<float>(q[i][j][1]/q[i][j][0] + q[i][j][3]*(gamma-1));
+            f[i][j][2] = static_cast<float>(pow(q[i][j][1], 2)*q[i][j][2]/q[i][j][0]);
+            f[i][j][3] = static_cast<float>(q[i][j][3]*q[i][j][1]*gamma/q[i][j][0]);
         }
     }
 }
@@ -207,10 +232,10 @@ void Solution::update_f() {
 void Solution::update_g() {
     for (int i; i<i_max; i++) {
         for (int j; j<j_max; j++) {
-            g[i][j][0] = q[i][j][2];
-            g[i][j][1] = q[i][j][1]*q[i][j][2]/q[i][j][0];
-            g[i][j][2] = pow(q[i][j][2], 2)/q[i][j][0] + q[i][j][3]*(gamma-1);
-            g[i][j][3] = q[i][j][3]*q[i][j][2]*gamma / q[i][j][0];
+            g[i][j][0] = static_cast<float>(q[i][j][2]);
+            g[i][j][1] = static_cast<float>(q[i][j][1]*q[i][j][2]/q[i][j][0]);
+            g[i][j][2] = static_cast<float>(pow(q[i][j][2], 2)/q[i][j][0] + q[i][j][3]*(gamma-1));
+            g[i][j][3] = static_cast<float>(q[i][j][3]*q[i][j][2]*gamma / q[i][j][0]);
         }
     }
 }
@@ -226,19 +251,17 @@ void Solution::iterate() {
     // get iteration alpha constant
     constexpr float alpha_values[] = {0.25f, 0.3333334f, 0.5f, 1.0f};
     float alpha = alpha_values[iteration_count % 4];
-    float delta_t = 0.0001;
+    float delta_t = 0.0001f;
 
     // allocations for calculation tools
     float area;
-    std::vector<float> res;
-    std::vector<float> curr_dissipation;
+    std::vector<float> res(4, 0);
+    std::vector<float> curr_dissipation(4, 0);
 
-    // enforce the boundary conditions
-    update_BCs();
 
     // calculate all f and g for the iteration
-    update_f(); update_g();
-
+    update_f(); 
+    update_g();
 
     for (int i = 2; i<i_max-2; i++) { // start and end at 2, <i_max-2 because we do not generate a residual for ghost cells (BCs take care of that)
         for (int j = 2; j<j_max-2; j++) {
@@ -246,15 +269,15 @@ void Solution::iterate() {
         std::cout << "\n\nDEBUG: begin analysis of cell i,j= " << i << "," << j << "\n";
         
         // calcualte cell area
-        area = 0.5*((mesh_data[i+1][j+1][0] - mesh_data[i][j][0])*(mesh_data[i+1][j][1] - mesh_data[i][j+1][1]) - 
-                    (mesh_data[i+1][j+1][1] - mesh_data[i][j][1])*(mesh_data[i+1][j][0] - mesh_data[i][j+1][0]));
+        area = static_cast<float>(0.5*((mesh_data[i+1][j+1][0] - mesh_data[i][j][0])    *   (mesh_data[i+1][j][1] - mesh_data[i][j+1][1]) - 
+                                 (mesh_data[i+1][j+1][1] - mesh_data[i][j][1])          *   (mesh_data[i+1][j][0] - mesh_data[i][j+1][0])));
         // std::cout << "calculating area based on the cells with coords \n" << 
         // mesh_data[i+1][j+1][0] << "," << mesh_data[i+1][j+1][1] << "\n" << 
         // mesh_data[i+1][j][0] << "," << mesh_data[i+1][j][1] << "\n" << 
         // mesh_data[i][j][0] << "," << mesh_data[i][j][1] << "\n" << 
         // mesh_data[i][j+1][0] << "," << mesh_data[i][j+1][1] << "\n" <<
         // "resulting area: " << area << "\n";
-        
+
         // calculate residual
         // residual = fs*delta ys, gs*delta xs
         for (int k = 0; k<3; k++) {
@@ -266,21 +289,23 @@ void Solution::iterate() {
         }
 
         // calculate dissipation $\vec D$
-        curr_dissipation = D(i,j);
+        curr_dissipation = D(i, j);
+        for (auto &p : curr_dissipation) {
+            std::cout << p;
+        }
 
-        // update q
+        // update the new q
         for (int k = 0; k<3; k++) {
             new_q[i][j][k] = CFL * delta_t * (1/area) * (res[k] - curr_dissipation[k]);
         }
 
         // calculate time_step
         // update new_q
-        system("pause");
+        // system("pause");
         }
     }
 
-
-    q = new_q;
-
-    iteration_count++; // update iteration counter
+    q = new_q;              // update inner cells based on inner calculations
+    update_BCs();           // update the boundary conditions to match inner calculations
+    iteration_count++;      // update iteration counter
 }
