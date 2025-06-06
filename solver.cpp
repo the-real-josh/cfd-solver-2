@@ -194,6 +194,7 @@ void Solution::update_BCs() {
 
 
     // outlet boundary condition
+
     /*Energy boundary condition:
         do not apply zero gradient to energy
         If subsonic:
@@ -206,8 +207,11 @@ void Solution::update_BCs() {
 
         In the Jameson paper, he said to say p = p_infty, and to do something with eigenvalues? He also says that there are other outer boundary conditions 
         that have been proposed that are worth investigating. I guess if it isn't playing tennis with the inlet boundary then it's fine? 
-        */
-    // no not apply zero gradient to energy. Calculate it with the exit pressure (subsonic) or the 
+
+        I am calculating energy based on the last density and velocity, not extrapolated density and velocity
+        it looks better this way.
+        this is debatable, and jameson agrees. */
+    
     float exit_v_mag_squared {0.0f};
     for (int i=2; i<i_max-2; i++) {
         for (int j=j_max-2; j<=j_max-1; j++) {
@@ -215,37 +219,38 @@ void Solution::update_BCs() {
                 new_q[i][j][k] = static_cast<float>(2*new_q[i][j_max-4][k] - new_q[i][j_max-3][k]); 
                 // change the j_max-4 for j-2 and j_max-3 for j-1 if you want to make it constant gradient instead of zero gradient
             }
-            exit_v_mag_squared = pow(new_q[i][j][1], 2) + pow(new_q[i][j][2], 2) / pow(new_q[i][j][0], 2);
-            new_q[i][j][3] = static_cast<float>(p_infty / (gamma-1) + new_q[i][j][0]*(0.5*exit_v_mag_squared)); // calculate rho*E
+            exit_v_mag_squared = pow(new_q[i][j_max-4][1], 2) + pow(new_q[i][j_max-4][2], 2) / pow(new_q[i][j_max-4][0], 2);
+            new_q[i][j][3] = static_cast<float>(p_infty/(gamma-1) + new_q[i][j_max-4][0]*(0.5*exit_v_mag_squared)); // calculate rho*E
         }
     }
 }
 
 void Solution::update_f_g() {
     // changed from being based on q to being based on new_q
+    // confirmed correct (check 'proofs for fluxes.py')
     float p;
     for (int i = 0; i<i_max; i++) {
         for (int j = 0; j<j_max; j++) {
             // probably pressure? idk it's a horribly complex recurring constant
-            p = (new_q[i][j][3] - 0.5*(new_q[i][j][1]*new_q[i][j][1] + new_q[i][j][2]*new_q[i][j][2])/new_q[i][j][0]); 
+            p = (new_q[i][j][3] - 0.5*(new_q[i][j][1]*new_q[i][j][1] + new_q[i][j][2]*new_q[i][j][2])/new_q[i][j][0])*(gamma-1); 
 
             // update f
             f[i][j][0] = static_cast<float>(new_q[i][j][1]);
-            f[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][1]/new_q[i][j][0] + p*(gamma-1));
+            f[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][1]/new_q[i][j][0] + p);
             f[i][j][2] = static_cast<float>(new_q[i][j][1]*new_q[i][j][2]/new_q[i][j][0]);
-            f[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][1]/new_q[i][j][0] + p*(gamma-1)*(new_q[i][j][1]/new_q[i][j][0]));
+            f[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][1]/new_q[i][j][0] + p*(new_q[i][j][1]/new_q[i][j][0]));
 
             // update g
             g[i][j][0] = static_cast<float>(new_q[i][j][2]);
             g[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][2]/new_q[i][j][0]);
-            g[i][j][2] = static_cast<float>(new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] + p*(gamma-1));
-            g[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][2]/new_q[i][j][0] + p*(gamma-1)*(new_q[i][j][2]/new_q[i][j][0]));
+            g[i][j][2] = static_cast<float>(new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] + p);
+            g[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][2]/new_q[i][j][0] + p*(new_q[i][j][2]/new_q[i][j][0]));
         }
     }
 }
 
 arrayD3 Solution::get_q() {
-    return q;
+    return new_q;
 }
 
 void Solution::iterate() {
@@ -258,39 +263,71 @@ void Solution::iterate() {
     float delta_t = 0.0001f;
     float sum_l_lamb = 0.0f;
 
+    float dx_e;
+    float dx_n;
+    float dx_w;
+    float dx_s;
+
+    float dy_e;
+    float dy_n;
+    float dy_w;
+    float dy_s;
+
     // allocations for calculation tools
-    float area;
+    float area; // unused as of now.
     std::vector<float> res(4, 0);
     std::vector<float> curr_dissipation(4, 0);
 
-    update_f_g(); // calculate all f and g for the iteration
+    update_f_g(); // calculate all f and g for the iteration (correct)
 
     for (int i = 2; i<i_max-2; i++) { // start and end at 2, <i_max-2 because we do not generate a residual for ghost cells (BCs take care of that)
         for (int j = 2; j<j_max-2; j++) {
-            
-            // std::cout << "DEBUG: begin analysis of cell i,j= " << i << "," << j << "\n";
-            
+                        
             // calcualte cell area
             area = static_cast<float>(0.5*((mesh_data[i+1][j+1][0] - mesh_data[i][j][0])    *   (mesh_data[i+1][j][1] - mesh_data[i][j+1][1]) - 
                                     (mesh_data[i+1][j+1][1] - mesh_data[i][j][1])          *   (mesh_data[i+1][j][0] - mesh_data[i][j+1][0])));
-            // std::cout << "calculating area based on the cells with coords \n" << 
-            // mesh_data[i+1][j+1][0] << "," << mesh_data[i+1][j+1][1] << "\n" << 
-            // mesh_data[i+1][j][0] << "," << mesh_data[i+1][j][1] << "\n" << 
-            // mesh_data[i][j][0] << "," << mesh_data[i][j][1] << "\n" << 
-            // mesh_data[i][j+1][0] << "," << mesh_data[i][j+1][1] << "\n" <<
-            // "resulting area: " << area << "\n";
 
-            // calculate residual
-            // residual = fs*delta ys, gs*delta xs
-            for (int k = 0; k<=3; k++) {
-                res[k] =  static_cast<float>(0.5*(f[i][j][k] + f[i][j+1][k])*(mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1])  -   0.5*(g[i][j][k] + g[i][j+1][k])*(mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0]) +   // east
-                                             0.5*(f[i][j][k] + f[i+1][j][k])*(mesh_data[i+1][j][1]-mesh_data[i+1][j+1][1])  -   0.5*(g[i][j][k] + g[i+1][j][k])*(mesh_data[i+1][j][0]-mesh_data[i+1][j+1][0]) +     // north
-                                             0.5*(f[i][j][k] + f[i][j-1][k])*(mesh_data[i][j][1]-mesh_data[i+1][j][1])      -   0.5*(g[i][j][k] + g[i][j-1][k])*(mesh_data[i][j][0]-mesh_data[i+1][j][0]) +         // west
-                                             0.5*(f[i][j][k] + f[i-1][j][k])*(mesh_data[i][j+1][1]-mesh_data[i][j][1])      -   0.5*(g[i][j][k] + g[i-1][j][k])*(mesh_data[i][j+1][0]-mesh_data[i][j][0])           // south
-                );
+            // these are correct
+            dy_e = (mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1]);
+            dx_e = -(mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0]);
+
+            dy_n = (mesh_data[i+1][j][1]-mesh_data[i+1][j+1][1]);
+            dx_n = -(mesh_data[i+1][j][0]-mesh_data[i+1][j+1][0]);
+
+            dy_w = (mesh_data[i][j][1]-mesh_data[i+1][j][1]);
+            dx_w = -(mesh_data[i][j][0]-mesh_data[i+1][j][0]);
+
+            dy_s = (mesh_data[i][j+1][1]-mesh_data[i][j][1]);
+            dx_s = -(mesh_data[i][j+1][0]-mesh_data[i][j][0]);
+
+            if (j >= 22) {
+                std::cout << "deltas in order for cell " << i << "," << j << "\n";
+                std::cout << "bottom left corner node coordinates: x=" << mesh_data[i][j][0] << " y=" << mesh_data[i][j][1] << "\n"; 
+                std::cout << "rationalization for dx_e -(" << mesh_data[i+1][j+1][0] << " - " << mesh_data[i][j+1][0] << ")\n";
+                std::cout << dy_e << "\n";
+                std::cout << dx_e << "\n\n";
+
+                std::cout << dy_n << "\n";
+                std::cout << dx_n << "\n\n";
+
+                std::cout << dy_w << "\n";
+                std::cout << dx_w << "\n\n";
+
+                std::cout << dy_s << "\n";
+                std::cout << dx_s << "\n\n";
+                system("pause");
             }
 
-            // BUG: res (or one of its coefficients) is zero.
+        
+            // calculate residual
+            // these are correct
+            for (int k = 0; k<=3; k++) {
+                res[k] = static_cast<float>(  0.5*(f[i][j][k] + f[i][j+1][k])*dy_e  +  0.5*(g[i][j][k] + g[i][j+1][k])*dx_e        // east
+                                             +0.5*(f[i][j][k] + f[i+1][j][k])*dy_n  +  0.5*(g[i][j][k] + g[i+1][j][k])*dx_n        // north
+                                             +0.5*(f[i][j][k] + f[i][j-1][k])*dy_w  +  0.5*(g[i][j][k] + g[i][j-1][k])*dx_w        // west
+                                             +0.5*(f[i][j][k] + f[i-1][j][k])*dy_s  +  0.5*(g[i][j][k] + g[i-1][j][k])*dx_s        // south
+                );
+            }
 
             // calculate dissipation $\vec D$ every 4
             if (iteration_count%4 == 0) {
@@ -304,10 +341,15 @@ void Solution::iterate() {
             //     }
             // }
 
+            // tried:
+            // - changing the sign of positive res (very wrong, becomes NaN in about three iterations)
+            // - reversing only the north and south normal directions (makes reversal much, much worse.)
+            // - reversing the direction that f and g are looking 
+
             // update the new q
             for (int k = 0; k<3; k++) {
                 // new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
-                new_q[i][j][k] = static_cast<float>(q[i][j][k] - (0.001) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
+                new_q[i][j][k] = static_cast<float>(q[i][j][k] - (0.001/area) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
             }
         }
     }
