@@ -1,6 +1,9 @@
 # Prerequisites
 *.d
 
+# everything inside cmake's build folder
+/out
+
 # Compiled Object files
 *.slo
 *.lo
