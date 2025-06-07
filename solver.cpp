@@ -300,23 +300,23 @@ void Solution::iterate() {
             dy_s = (mesh_data[i][j+1][1]-mesh_data[i][j][1]);
             dx_s = -(mesh_data[i][j+1][0]-mesh_data[i][j][0]);
 
-            if (j >= 22) {
-                std::cout << "deltas in order for cell " << i << "," << j << "\n";
-                std::cout << "bottom left corner node coordinates: x=" << mesh_data[i][j][0] << " y=" << mesh_data[i][j][1] << "\n"; 
-                std::cout << "rationalization for dx_e -(" << mesh_data[i+1][j+1][0] << " - " << mesh_data[i][j+1][0] << ")\n";
-                std::cout << dy_e << "\n";
-                std::cout << dx_e << "\n\n";
+            // if (j >= 22) {
+            //     std::cout << "deltas in order for cell " << i << "," << j << "\n";
+            //     std::cout << "bottom left corner node coordinates: x=" << mesh_data[i][j][0] << " y=" << mesh_data[i][j][1] << "\n"; 
+            //     std::cout << "rationalization for dx_e -(" << mesh_data[i+1][j+1][0] << " - " << mesh_data[i][j+1][0] << ")\n";
+            //     std::cout << dy_e << "\n";
+            //     std::cout << dx_e << "\n\n";
 
-                std::cout << dy_n << "\n";
-                std::cout << dx_n << "\n\n";
+            //     std::cout << dy_n << "\n";
+            //     std::cout << dx_n << "\n\n";
 
-                std::cout << dy_w << "\n";
-                std::cout << dx_w << "\n\n";
+            //     std::cout << dy_w << "\n";
+            //     std::cout << dx_w << "\n\n";
 
-                std::cout << dy_s << "\n";
-                std::cout << dx_s << "\n\n";
-                system("pause");
-            }
+            //     std::cout << dy_s << "\n";
+            //     std::cout << dx_s << "\n\n";
+            //     system("pause");
+            // }
 
         
             // calculate residual
@@ -346,10 +346,12 @@ void Solution::iterate() {
             // - reversing only the north and south normal directions (makes reversal much, much worse.)
             // - reversing the direction that f and g are looking 
 
+            // reversing one of the signs in the f calculator (best result) with a + in the update (everyone stype) instead of a - (cizmas style)
+
             // update the new q
             for (int k = 0; k<3; k++) {
                 // new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
-                new_q[i][j][k] = static_cast<float>(q[i][j][k] - (0.001/area) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
+                new_q[i][j][k] = static_cast<float>(q[i][j][k] + (0.001/area) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
             }
         }
     }
