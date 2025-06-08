@@ -5,6 +5,10 @@
 #include <cmath>
 // TODO: rename to solve_engine or something like that
 
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
 // data inputter
 void Solution::innit(arrayD3 _mesh_data) {
 
@@ -225,6 +229,8 @@ void Solution::update_BCs() {
     }
 }
 
+
+
 void Solution::update_f_g() {
     // changed from being based on q to being based on new_q
     // confirmed correct (check 'proofs for fluxes.py')
@@ -243,7 +249,13 @@ void Solution::update_f_g() {
             // update g
             g[i][j][0] = static_cast<float>(new_q[i][j][2]);
             g[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][2]/new_q[i][j][0]);
-            g[i][j][2] = static_cast<float>(new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] + p);
+            g[i][j][2] = static_cast<float>(static_cast<float>(sgn(new_q[i][j][2]))*new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] + p); // re-sign the square.
+
+            // if (j==22) {
+            //     std::cout << "i=" << i << "\n";
+            //     std::cout << new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] << " + p, where p=" << p << "\n";
+            //     system("pause");
+            // }
             g[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][2]/new_q[i][j][0] + p*(new_q[i][j][2]/new_q[i][j][0]));
         }
     }
@@ -287,17 +299,17 @@ void Solution::iterate() {
             area = static_cast<float>(0.5*((mesh_data[i+1][j+1][0] - mesh_data[i][j][0])    *   (mesh_data[i+1][j][1] - mesh_data[i][j+1][1]) - 
                                     (mesh_data[i+1][j+1][1] - mesh_data[i][j][1])          *   (mesh_data[i+1][j][0] - mesh_data[i][j+1][0])));
 
-            // these are correct
-            dy_e = (mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1]);
+            // these are correct (inward pointing now)
+            dy_e =  (mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1]);
             dx_e = -(mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0]);
 
-            dy_n = (mesh_data[i+1][j][1]-mesh_data[i+1][j+1][1]);
+            dy_n =  (mesh_data[i+1][j][1]-mesh_data[i+1][j+1][1]);
             dx_n = -(mesh_data[i+1][j][0]-mesh_data[i+1][j+1][0]);
 
-            dy_w = (mesh_data[i][j][1]-mesh_data[i+1][j][1]);
+            dy_w =  (mesh_data[i][j][1]-mesh_data[i+1][j][1]);
             dx_w = -(mesh_data[i][j][0]-mesh_data[i+1][j][0]);
 
-            dy_s = (mesh_data[i][j+1][1]-mesh_data[i][j][1]);
+            dy_s =  (mesh_data[i][j+1][1]-mesh_data[i][j][1]);
             dx_s = -(mesh_data[i][j+1][0]-mesh_data[i][j][0]);
 
             // if (j >= 22) {
@@ -318,7 +330,6 @@ void Solution::iterate() {
             //     system("pause");
             // }
 
-        
             // calculate residual
             // these are correct
             for (int k = 0; k<=3; k++) {
@@ -328,6 +339,35 @@ void Solution::iterate() {
                                              +0.5*(f[i][j][k] + f[i-1][j][k])*dy_s  +  0.5*(g[i][j][k] + g[i-1][j][k])*dx_s        // south
                 );
             }
+            // answer for W3: v is decreasing is becauseof the south face (yes)
+            // if (j==31) {
+            //     std::cout << "j,i=" << j << "," << i << "\n";
+            //     std::cout <<     0.5*(f[i][j][2] + f[i][j+1][2])*dy_e  +  0.5*(g[i][j][2] + g[i][j+1][2])*dx_e << "+\n" << 
+            //                     +0.5*(f[i][j][2] + f[i+1][j][2])*dy_n  +  0.5*(g[i][j][2] + g[i+1][j][2])*dx_n << "+\n" << 
+            //                     +0.5*(f[i][j][2] + f[i][j-1][2])*dy_w  +  0.5*(g[i][j][2] + g[i][j-1][2])*dx_w << "+\n" <<
+            //                       0.5*(f[i][j][2] + f[i][j+1][2])*dy_e  +  0.5*(g[i][j][2] + g[i][j+1][2])*dx_e
+            //                     +0.5*(f[i][j][2] + f[i+1][j][2])*dy_n  +  0.5*(g[i][j][2] + g[i+1][j][2])*dx_n
+            //                     +0.5*(f[i][j][2] + f[i][j-1][2])*dy_w  +  0.5*(g[i][j][2] + g[i][j-1][2])*dx_w
+            //                     +0.5*(f[i][j][2] + f[i-1][j][2])*dy_s  +  0.5*(g[i][j][2] + g[i-1][j][2])*dx_s << "\n\n";
+            //     system("pause");
+            // }
+
+            if (j==31) {
+                std::cout << "South face contribution: \n";
+                std::cout << "+0.5*(" << f[i][j][2] << "+" << f[i-1][j][2] << ")*dy_s  +  0.5*(" << g[i][j][2] << "+" << g[i-1][j][2] <<")*dx_s\n";
+                std::cout << "dy_s: " << dy_s << "\n";
+                std::cout << "dx_s: " << dx_s << "\n\n";
+
+                std::cout << "North face contribution: \n";
+                std::cout << "0.5*(" << f[i][j][2] << "+" << f[i+1][j][2] << ")*dy_n + " << "0.5*(" << g[i][j][2] << "+" << g[i+1][j][2] << ")*dx_n\n";
+                std::cout << "dy_n: " << dy_n << "\n";
+                std::cout << "dx_n: " << dx_n << "\n";
+
+                system("pause");
+            }
+            // east&west: -4000
+            // north&south+3000
+
 
             // calculate dissipation $\vec D$ every 4
             if (iteration_count%4 == 0) {
@@ -347,6 +387,19 @@ void Solution::iterate() {
             // - reversing the direction that f and g are looking 
 
             // reversing one of the signs in the f calculator (best result) with a + in the update (everyone stype) instead of a - (cizmas style)
+
+            // Problem: v should increase slightly and hold constant. Instead, it decreases.
+            // W1) Why does v decrease? 
+            // answer for W1) It is because (0.001/area) * /* constants */ (res[k] - curr_dissipation[k])) is negative for k=2
+            // W2) Why is (0.001/area) * /* constants */ (res[k] - curr_dissipation[k])) negative for k=2
+
+            // answer for W2: It is because the res[2] is highly negative (-229.936)
+            // if (j==22) {
+            //     std::cout << "term= + " <<  (0.001/area) << "*(" << (res[2]) << "- " << curr_dissipation[2] << ")\n";
+            //     system("Pause");
+            // }
+
+            // W3) Why is res[2] highly negative?
 
             // update the new q
             for (int k = 0; k<3; k++) {

@@ -438,10 +438,10 @@ def main():
             results_fname = f'results_sh={c_dim[0]}x{c_dim[1]} M={mach}.csv'
 
             run(mesh_core_dimensions=c_dim,
-                 mach=mach,
-                   results_fname=results_fname,
-                     mesh_fname=mesh_fname,
-                     max_iterations=2)
+                mach=mach,
+                results_fname=results_fname,
+                mesh_fname=mesh_fname,
+                max_iterations=0)
         
             plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)
 
@@ -453,10 +453,10 @@ def test_main():
 
     mesh_plot(x,y); plt.show()
 
-    run(mesh_core_dimensions=(2,1), # core i_max = 1, core j_max = 2
-        mach=0.5,
-        results_fname='output.csv',
-        mesh_fname='test.csv')
+    # run(mesh_core_dimensions=(2,1), # core i_max = 1, core j_max = 2
+    #     mach=0.5,
+    #     results_fname='output.csv',
+    #     mesh_fname='test.csv')
     
     plot_results_pv(mesh_core_dimensions=(2,1), mesh_fname='test.csv', results_fname='output.csv')
 
