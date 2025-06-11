@@ -5,10 +5,6 @@
 #include <cmath>
 // TODO: rename to solve_engine or something like that
 
-template <typename T> int sgn(T val) {
-    return (T(0) < val) - (val < T(0));
-}
-
 // data inputter
 void Solution::innit(arrayD3 _mesh_data) {
 
@@ -249,13 +245,13 @@ void Solution::update_f_g() {
             // update g
             g[i][j][0] = static_cast<float>(new_q[i][j][2]);
             g[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][2]/new_q[i][j][0]);
-            g[i][j][2] = static_cast<float>(static_cast<float>(sgn(new_q[i][j][2]))*new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] + p); // re-sign the square.
+            g[i][j][2] = static_cast<float>(new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] + p); // re-sign the square.
 
-            // if (j==22) {
-            //     std::cout << "i=" << i << "\n";
-            //     std::cout << new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] << " + p, where p=" << p << "\n";
-            //     system("pause");
-            // }
+            if (j==22) {
+                std::cout << "i=" << i << "\n";
+                std::cout << new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] << " + p, where p=" << p << "\n";
+                system("pause");
+            }
             g[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][2]/new_q[i][j][0] + p*(new_q[i][j][2]/new_q[i][j][0]));
         }
     }
@@ -299,18 +295,18 @@ void Solution::iterate() {
             area = static_cast<float>(0.5*((mesh_data[i+1][j+1][0] - mesh_data[i][j][0])    *   (mesh_data[i+1][j][1] - mesh_data[i][j+1][1]) - 
                                     (mesh_data[i+1][j+1][1] - mesh_data[i][j][1])          *   (mesh_data[i+1][j][0] - mesh_data[i][j+1][0])));
 
-            // these are correct (inward pointing now)
+            // cell wall deltas
             dy_e =  (mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1]);
-            dx_e = -(mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0]);
+            dx_e =  (mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0]);
 
             dy_n =  (mesh_data[i+1][j][1]-mesh_data[i+1][j+1][1]);
-            dx_n = -(mesh_data[i+1][j][0]-mesh_data[i+1][j+1][0]);
+            dx_n =  (mesh_data[i+1][j][0]-mesh_data[i+1][j+1][0]);
 
             dy_w =  (mesh_data[i][j][1]-mesh_data[i+1][j][1]);
-            dx_w = -(mesh_data[i][j][0]-mesh_data[i+1][j][0]);
+            dx_w =  (mesh_data[i][j][0]-mesh_data[i+1][j][0]);
 
             dy_s =  (mesh_data[i][j+1][1]-mesh_data[i][j][1]);
-            dx_s = -(mesh_data[i][j+1][0]-mesh_data[i][j][0]);
+            dx_s =  (mesh_data[i][j+1][0]-mesh_data[i][j][0]);
 
             // if (j >= 22) {
             //     std::cout << "deltas in order for cell " << i << "," << j << "\n";
@@ -331,42 +327,39 @@ void Solution::iterate() {
             // }
 
             // calculate residual
-            // these are correct
+            // multiply f by dy and g by (-dx). The reason for the x-y and sign reversal is to make the wall delta into a normal
             for (int k = 0; k<=3; k++) {
-                res[k] = static_cast<float>(  0.5*(f[i][j][k] + f[i][j+1][k])*dy_e  +  0.5*(g[i][j][k] + g[i][j+1][k])*dx_e        // east
-                                             +0.5*(f[i][j][k] + f[i+1][j][k])*dy_n  +  0.5*(g[i][j][k] + g[i+1][j][k])*dx_n        // north
-                                             +0.5*(f[i][j][k] + f[i][j-1][k])*dy_w  +  0.5*(g[i][j][k] + g[i][j-1][k])*dx_w        // west
-                                             +0.5*(f[i][j][k] + f[i-1][j][k])*dy_s  +  0.5*(g[i][j][k] + g[i-1][j][k])*dx_s        // south
+                res[k] = static_cast<float>(  0.5*(f[i][j][k] + f[i][j+1][k])*dy_e  +  0.5*(g[i][j][k] + g[i][j+1][k])*(-dx_e)        // east
+                                             +0.5*(f[i][j][k] + f[i+1][j][k])*dy_n  +  0.5*(g[i][j][k] + g[i+1][j][k])*(-dx_n)        // north
+                                             +0.5*(f[i][j][k] + f[i][j-1][k])*dy_w  +  0.5*(g[i][j][k] + g[i][j-1][k])*(-dx_w)        // west
+                                             +0.5*(f[i][j][k] + f[i-1][j][k])*dy_s  +  0.5*(g[i][j][k] + g[i-1][j][k])*(-dx_s)        // south
                 );
             }
+
             // answer for W3: v is decreasing is becauseof the south face (yes)
             // if (j==31) {
             //     std::cout << "j,i=" << j << "," << i << "\n";
-            //     std::cout <<     0.5*(f[i][j][2] + f[i][j+1][2])*dy_e  +  0.5*(g[i][j][2] + g[i][j+1][2])*dx_e << "+\n" << 
-            //                     +0.5*(f[i][j][2] + f[i+1][j][2])*dy_n  +  0.5*(g[i][j][2] + g[i+1][j][2])*dx_n << "+\n" << 
-            //                     +0.5*(f[i][j][2] + f[i][j-1][2])*dy_w  +  0.5*(g[i][j][2] + g[i][j-1][2])*dx_w << "+\n" <<
-            //                       0.5*(f[i][j][2] + f[i][j+1][2])*dy_e  +  0.5*(g[i][j][2] + g[i][j+1][2])*dx_e
-            //                     +0.5*(f[i][j][2] + f[i+1][j][2])*dy_n  +  0.5*(g[i][j][2] + g[i+1][j][2])*dx_n
-            //                     +0.5*(f[i][j][2] + f[i][j-1][2])*dy_w  +  0.5*(g[i][j][2] + g[i][j-1][2])*dx_w
-            //                     +0.5*(f[i][j][2] + f[i-1][j][2])*dy_s  +  0.5*(g[i][j][2] + g[i-1][j][2])*dx_s << "\n\n";
+            //     std::cout <<     0.5*(f[i][j][2] + f[i][j+1][2])*dy_e  +  0.5*(g[i][j][2] + g[i][j+1][2])*(-dx_e)
+            //                     +0.5*(f[i][j][2] + f[i+1][j][2])*dy_n  +  0.5*(g[i][j][2] + g[i+1][j][2])*(-dx_n)
+            //                     +0.5*(f[i][j][2] + f[i][j-1][2])*dy_w  +  0.5*(g[i][j][2] + g[i][j-1][2])*(-dx_w)
+            //                     +0.5*(f[i][j][2] + f[i-1][j][2])*dy_s  +  0.5*(g[i][j][2] + g[i-1][j][2])*(-dx_s) << "\n\n";
             //     system("pause");
             // }
 
             if (j==31) {
-                std::cout << "South face contribution: \n";
-                std::cout << "+0.5*(" << f[i][j][2] << "+" << f[i-1][j][2] << ")*dy_s  +  0.5*(" << g[i][j][2] << "+" << g[i-1][j][2] <<")*dx_s\n";
-                std::cout << "dy_s: " << dy_s << "\n";
-                std::cout << "dx_s: " << dx_s << "\n\n";
-
-                std::cout << "North face contribution: \n";
-                std::cout << "0.5*(" << f[i][j][2] << "+" << f[i+1][j][2] << ")*dy_n + " << "0.5*(" << g[i][j][2] << "+" << g[i+1][j][2] << ")*dx_n\n";
-                std::cout << "dy_n: " << dy_n << "\n";
-                std::cout << "dx_n: " << dx_n << "\n";
-
+                std::cout << "j,i=" << j << "," << i << "\n";
+                std::cout <<     0.5*(f[i][j][2] + f[i][j+1][2])*dy_e  +  0.5*(g[i][j][2] + g[i][j+1][2])*(-dx_e) << "\n" << 
+                                +0.5*(f[i][j][2] + f[i+1][j][2])*dy_n  +  0.5*(g[i][j][2] + g[i+1][j][2])*(-dx_n) << "\n" << 
+                                +0.5*(f[i][j][2] + f[i][j-1][2])*dy_w  +  0.5*(g[i][j][2] + g[i][j-1][2])*(-dx_w) << "\n" << 
+                                +0.5*(f[i][j][2] + f[i-1][j][2])*dy_s  +  0.5*(g[i][j][2] + g[i-1][j][2])*(-dx_s) << "\n\n";
                 system("pause");
             }
-            // east&west: -4000
-            // north&south+3000
+
+            // if (j==31) {
+            //     std::cout << "j,i=" << j << "," << i << "\n";
+            //     std::cout <<  "south residual contribution: is it f or g?" <<  +0.5*(f[i][j][2] + f[i-1][j][2])*dy_s   << "+" <<  0.5*(g[i][j][2] + g[i-1][j][2])*(-dx_s) << "\n\n";
+            //     system("pause");
+            // }
 
 
             // calculate dissipation $\vec D$ every 4
@@ -404,7 +397,7 @@ void Solution::iterate() {
             // update the new q
             for (int k = 0; k<3; k++) {
                 // new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
-                new_q[i][j][k] = static_cast<float>(q[i][j][k] + (0.001/area) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
+                new_q[i][j][k] = static_cast<float>(q[i][j][k] - (0.001/area) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
             }
         }
     }

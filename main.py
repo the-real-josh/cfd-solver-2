@@ -429,7 +429,7 @@ def main():
             my_mesh.generate()
             my_mesh.ghostify() # saved mesh must be ghostified.
             my_mesh.save(mesh_fname)
-            my_mesh.plot()
+            my_mesh.plot() 
 
         # my_mesh.plot() # 
 
