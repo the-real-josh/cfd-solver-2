@@ -416,6 +416,10 @@ void Solution::iterate() {
             for (int k = 0; k<3; k++) {
                 new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * (res[k] - curr_dissipation[k])); // residual and dissipation
             }
+            if (i==2 && j==25) {
+                std::cout << new_q[i][j][0] << ", " << new_q[i][j][1] << ", " << new_q[i][j][2] << ", " << new_q[i][j][3] << ", \n";
+                system("pause");
+            }
         }
     }
 
