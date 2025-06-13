@@ -884,11 +884,12 @@ def run(x_list, y_list, mach):
 
                 # prevent nan residuals
                 assert not np.isnan(np.dot(res, res)), "residual cannot be nan"
-
+                assert A>0.0
                 # calculate new state
-                new_q[:] = cell_data[j,i,:] - (alphas[it_number%4]*delta_t / A) * (res - D) # RK iteration with CFL
-
+                # new_q[:] = cell_data[j,i,:] - (alphas[it_number%4]*delta_t / A) * (res - D) # RK iteration with CFL
+                new_q[:] = cell_data[j,i,:] - (delta_t/A) * (res - D) # RK iteration without CFL
                 # residual calculations
+
                 ag_res += abs(np.linalg.norm(res))
                 if max(res) >= max(max_res):
                     max_res = res
