@@ -64,9 +64,10 @@ class Solution {
         float e(int i, int j);                  // get specific internal static energy at a cell
     
         // advanced numerical finders
-        float l(float i, float j);              // length of cell wall (input off-integer values)
+        float l(int i, int j, float off_i, float off_j);              // length of cell wall (input off-integer values)
         float lambda(float i, float j);         // eigenvalue of cell at the wall (input off-integer values)
-    
+        float cizmas_lambda(int i, int j, float off_i, float off_j);
+
         std::vector<float> D(int i, int j);              // dissipation at the cell
     };
 

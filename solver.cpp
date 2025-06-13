@@ -44,47 +44,137 @@ void Solution::innit(arrayD3 _mesh_data) {
     update_BCs();
 }
 
-// simple state getters
 float Solution::p(int i, int j) {
+    // pressure (unused, invalid)
     std::cout << "Pressure getter reporting";
     return 0.0;
-}                 
+}     
+
 float Solution::T(int i, int j) {
-    std::cout << "temperature getter reporting";
-    return 0.0;
-}                 
+    // get the energy for the current cell
+    float E {static_cast<float>(new_q[i][j][3]/new_q[i][j][0])};
+    float V_squared {static_cast<float>(
+        pow(new_q[i][j][1]/new_q[i][j][0], 2) + pow(new_q[i][j][2]/new_q[i][j][0], 2)
+    )};
+    return (E-0.5*V_squared)/cv;
+} 
+
 float Solution::rho(int i, int j) {
-    std::cout << "density getter reporting";
-    return 0.0;
+    // currently unused
+    return new_q[i][j][0];
 }
+
 float Solution::e(int i, int j) {
+    // unused, invalid
     std::cout << "specific internal static energy getter reporting";
     return 0.0;
 }
 
 
 // internal functions
-float Solution::l(float i, float j) {
+float Solution::l(int i, int j, float off_i, float off_j) {
     // returns the length of a cell wall given the wall's index in off-integer notation
     std::cout << "length function reporting";
-    // convert to wall-coordinates
-    return 0.0;
-    // returns the length of a cell wall  
+
+    // safety check
+    if (off_i > 0.2 && off_j > 0.2) {
+        std::cout << "Cannot have both i and j be off-integer.\n";
+        exit(1);
+    }
+
+    // I know it's terrible, but it's easy to diagnose for now.
+    if (off_j > 0.1) {
+        return sqrt(
+        pow(mesh_data[i][j+1][0] - mesh_data[i+1][j+1][0], 2) + 
+        pow(mesh_data[i][j+1][1] - mesh_data[i+1][j+1][1], 2));
+    }
+    else if (off_i > 0.1) {
+        return sqrt(
+        pow(mesh_data[i+1][j][0] - mesh_data[i+1][j+1][0], 2) + 
+        pow(mesh_data[i+1][j][1] - mesh_data[i+1][j+1][1], 2));
+    }
+    else if (off_j < 0.1) {
+        return sqrt(
+        pow(mesh_data[i][j][0] - mesh_data[i+1][j][0], 2) + 
+        pow(mesh_data[i][j][1] - mesh_data[i+1][j][1], 2));
+    }
+    else if (off_i < 0.1) {
+        return sqrt(
+        pow(mesh_data[i][j][0] - mesh_data[i][j+1][0], 2) + 
+        pow(mesh_data[i][j][1] - mesh_data[i][j+1][1], 2));
+    } else {
+        std::cout << "Need to select a wall in order to get its length (both i and j were zero)\n";
+        exit(1);
+        return 0.0f;
+    }
+
 }
 
 float Solution::lambda(float i, float j) {
     /* input: j and i in off-integer notation
      body:
-         takes the velocity AT THE WALL (average) between the two cells
+         takes the velocity from the two wall ajacent cells
+         takes the normal from the wall's normal
+
+         calculates the average speed of sound between the two cells
+
+     returns:
+         lambda value
+
+         key difference between this code and the python - need to calculate lambda based on velocity at the wall (average between cells)
+    */
+    int cell_i_left = round(i-0.1);  // left and right are used conceptually (could be a/b 1/2, etc) Not literal
+    int cell_j_left = round(j-0.1);
+
+    int cell_i_right = round (i+0.1);
+    int cell_j_right = round(j+0.1);
+
+    //float a {gamma*R*T()}
+
+    // returns the eigenvalue at the cell
+    return 0.0;
+}
+
+// cizmas style
+float Solution::cizmas_lambda(int i, int j, float off_i, float off_j) {
+    /* input: j and i in off-integer notation
+     body:
+         takes the velocity of the original cell between the two cells
          takes l = the wall normal of the velocity
      returns:
          l
 
          key difference between this code and the python - need to calculate lambda based on velocity at the wall (average between cells)
     */
-    std::cout << "lambda function reporting";
+
+    float speed_o_sound_sonic {static_cast<float>(gamma*R*T(i, j))};
+    std::vector<float> cell_V {static_cast<float>(new_q[i][j][1]/new_q[i][j][0],
+                                                  new_q[i][j][2]/new_q[i][j][0] )};
+
+    // I know it's terrible, but it's easy to diagnose for now.
+    float dy;
+    float dx;
+
+    if (off_j > 0.1) {
+        dy = (mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1]);
+        dx = (mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0]);
+    }
+    if (off_i > 0.1) {
+        dy = (mesh_data[i+1][j][1]-mesh_data[i+1][j+1][1]);
+        dx = (mesh_data[i+1][j][0]-mesh_data[i+1][j+1][0]);
+    }
+    if (off_j < 0.1) {
+        dy = (mesh_data[i][j][1]-mesh_data[i+1][j][1]);
+        dx = (mesh_data[i][j][0]-mesh_data[i+1][j][0]);
+    }
+    if (off_i < 0.1) {
+        dy = (mesh_data[i][j+1][1]-mesh_data[i][j][1]);
+        dx = (mesh_data[i][j+1][0]-mesh_data[i][j][0]);
+    }
+    std::vector<float> normal = {dy, -dx};
+
     // returns the eigenvalue at the cell
-    return 0.0;
+    return static_cast<float>(cell_V[0]*normal[0] + cell_V[1]*normal[1] + speed_o_sound_sonic);
 }
 
 std::vector<float> Solution::D(int i, int j) {
@@ -246,12 +336,6 @@ void Solution::update_f_g() {
             g[i][j][0] = static_cast<float>(new_q[i][j][2]);
             g[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][2]/new_q[i][j][0]);
             g[i][j][2] = static_cast<float>(new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] + p); // re-sign the square.
-
-            if (j==22) {
-                std::cout << "i=" << i << "\n";
-                std::cout << new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] << " + p, where p=" << p << "\n";
-                system("pause");
-            }
             g[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][2]/new_q[i][j][0] + p*(new_q[i][j][2]/new_q[i][j][0]));
         }
     }
@@ -269,7 +353,7 @@ void Solution::iterate() {
     constexpr float alpha_values[] = {0.25f, 0.3333334f, 0.5f, 1.0f};
     float alpha = alpha_values[iteration_count % 4];
     float delta_t = 0.0001f;
-    float sum_l_lamb = 0.0f;
+    float sum_l_lamb = 0.0f; // $\Sum_0^4 l*\lambda$
 
     float dx_e;
     float dx_n;
@@ -308,25 +392,6 @@ void Solution::iterate() {
             dy_s =  (mesh_data[i][j+1][1]-mesh_data[i][j][1]);
             dx_s =  (mesh_data[i][j+1][0]-mesh_data[i][j][0]);
 
-            // if (j >= 22) {
-            //     std::cout << "deltas in order for cell " << i << "," << j << "\n";
-            //     std::cout << "bottom left corner node coordinates: x=" << mesh_data[i][j][0] << " y=" << mesh_data[i][j][1] << "\n"; 
-            //     std::cout << "rationalization for dx_e -(" << mesh_data[i+1][j+1][0] << " - " << mesh_data[i][j+1][0] << ")\n";
-            //     std::cout << dy_e << "\n";
-            //     std::cout << dx_e << "\n\n";
-
-            //     std::cout << dy_n << "\n";
-            //     std::cout << dx_n << "\n\n";
-
-            //     std::cout << dy_w << "\n";
-            //     std::cout << dx_w << "\n\n";
-
-            //     std::cout << dy_s << "\n";
-            //     std::cout << dx_s << "\n\n";
-            //     system("pause");
-            // }
-
-            // calculate residual
             // multiply f by dy and g by (-dx). The reason for the x-y and sign reversal is to make the wall delta into a normal
             for (int k = 0; k<=3; k++) {
                 res[k] = static_cast<float>(  0.5*(f[i][j][k] + f[i][j+1][k])*dy_e  +  0.5*(g[i][j][k] + g[i][j+1][k])*(-dx_e)        // east
@@ -336,68 +401,20 @@ void Solution::iterate() {
                 );
             }
 
-            // answer for W3: v is decreasing is becauseof the south face (yes)
-            // if (j==31) {
-            //     std::cout << "j,i=" << j << "," << i << "\n";
-            //     std::cout <<     0.5*(f[i][j][2] + f[i][j+1][2])*dy_e  +  0.5*(g[i][j][2] + g[i][j+1][2])*(-dx_e)
-            //                     +0.5*(f[i][j][2] + f[i+1][j][2])*dy_n  +  0.5*(g[i][j][2] + g[i+1][j][2])*(-dx_n)
-            //                     +0.5*(f[i][j][2] + f[i][j-1][2])*dy_w  +  0.5*(g[i][j][2] + g[i][j-1][2])*(-dx_w)
-            //                     +0.5*(f[i][j][2] + f[i-1][j][2])*dy_s  +  0.5*(g[i][j][2] + g[i-1][j][2])*(-dx_s) << "\n\n";
-            //     system("pause");
-            // }
-
-            if (j==31) {
-                std::cout << "j,i=" << j << "," << i << "\n";
-                std::cout <<     0.5*(f[i][j][2] + f[i][j+1][2])*dy_e  +  0.5*(g[i][j][2] + g[i][j+1][2])*(-dx_e) << "\n" << 
-                                +0.5*(f[i][j][2] + f[i+1][j][2])*dy_n  +  0.5*(g[i][j][2] + g[i+1][j][2])*(-dx_n) << "\n" << 
-                                +0.5*(f[i][j][2] + f[i][j-1][2])*dy_w  +  0.5*(g[i][j][2] + g[i][j-1][2])*(-dx_w) << "\n" << 
-                                +0.5*(f[i][j][2] + f[i-1][j][2])*dy_s  +  0.5*(g[i][j][2] + g[i-1][j][2])*(-dx_s) << "\n\n";
-                system("pause");
-            }
-
-            // if (j==31) {
-            //     std::cout << "j,i=" << j << "," << i << "\n";
-            //     std::cout <<  "south residual contribution: is it f or g?" <<  +0.5*(f[i][j][2] + f[i-1][j][2])*dy_s   << "+" <<  0.5*(g[i][j][2] + g[i-1][j][2])*(-dx_s) << "\n\n";
-            //     system("pause");
-            // }
-
-
             // calculate dissipation $\vec D$ every 4
             if (iteration_count%4 == 0) {
                 curr_dissipation = D(i, j);
             }
 
-            sum_l_lamb = 0.0f;
-            // for (float i_adder = -1/2; i_adder <= 0.51; i_adder+=1/2) {
-            //     for (float j_adder = -1/2; j_adder <= 0.51; j_adder+=1/2) {
-            //         sum_l_lamb += static_cast<float>(lambda(i+i_adder, j+j_adder) * l(i+i_adder, j+j_adder));
-            //     }
-            // }
-
-            // tried:
-            // - changing the sign of positive res (very wrong, becomes NaN in about three iterations)
-            // - reversing only the north and south normal directions (makes reversal much, much worse.)
-            // - reversing the direction that f and g are looking 
-
-            // reversing one of the signs in the f calculator (best result) with a + in the update (everyone stype) instead of a - (cizmas style)
-
-            // Problem: v should increase slightly and hold constant. Instead, it decreases.
-            // W1) Why does v decrease? 
-            // answer for W1) It is because (0.001/area) * /* constants */ (res[k] - curr_dissipation[k])) is negative for k=2
-            // W2) Why is (0.001/area) * /* constants */ (res[k] - curr_dissipation[k])) negative for k=2
-
-            // answer for W2: It is because the res[2] is highly negative (-229.936)
-            // if (j==22) {
-            //     std::cout << "term= + " <<  (0.001/area) << "*(" << (res[2]) << "- " << curr_dissipation[2] << ")\n";
-            //     system("Pause");
-            // }
-
-            // W3) Why is res[2] highly negative?
+            // half index notation is stupid. Henceforth, we will have i,j,i_offset,j_offset
+            sum_l_lamb = sqrt(dx_e*dx_e+dy_e*dy_e) * cizmas_lambda(i, j, 0.0f, 0.5f) +
+                        sqrt(dx_n*dx_n+dy_n*dy_n)  * cizmas_lambda(i, j, 0.5f, 0.0f) +
+                        sqrt(dx_w*dx_w+dy_w*dy_w)  * cizmas_lambda(i, j, 0.0f, -0.5f) +
+                        sqrt(dx_s*dx_s+dy_s*dy_s)  * cizmas_lambda(i, j, -0.5f, 0.0f);
 
             // update the new q
             for (int k = 0; k<3; k++) {
-                // new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
-                new_q[i][j][k] = static_cast<float>(q[i][j][k] - (0.001/area) * /* constants */ (res[k] - curr_dissipation[k])); // residual and dissipation
+                new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * (res[k] - curr_dissipation[k])); // residual and dissipation
             }
         }
     }
