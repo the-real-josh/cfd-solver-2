@@ -129,7 +129,7 @@ float Solution::lambda(float i, float j) {
     int cell_i_right = round (i+0.1);
     int cell_j_right = round(j+0.1);
 
-    //float a {gamma*R*T()}
+    //float a {sqrt(gamma*R*T())}
 
     // returns the eigenvalue at the cell
     return 0.0;
@@ -147,9 +147,9 @@ float Solution::cizmas_lambda(int i, int j, float off_i, float off_j) {
          key difference between this code and the python - need to calculate lambda based on velocity at the wall (average between cells)
     */
 
-    float speed_o_sound_sonic {static_cast<float>(gamma*R*T(i, j))};
-    std::vector<float> cell_V {static_cast<float>(new_q[i][j][1]/new_q[i][j][0],
-                                                  new_q[i][j][2]/new_q[i][j][0] )};
+    float speed_o_sound_sonic {static_cast<float>(sqrt(gamma*R*T(i, j)))};
+    std::vector<float> cell_V {static_cast<float>(new_q[i][j][1]/new_q[i][j][0]),
+                               static_cast<float>(new_q[i][j][2]/new_q[i][j][0])};
 
     // I know it's terrible, but it's easy to diagnose for now.
     float dy;
@@ -171,7 +171,8 @@ float Solution::cizmas_lambda(int i, int j, float off_i, float off_j) {
         dy = (mesh_data[i][j+1][1]-mesh_data[i][j][1]);
         dx = (mesh_data[i][j+1][0]-mesh_data[i][j][0]);
     }
-    std::vector<float> normal = {dy, -dx};
+    std::vector<float> normal = {static_cast<float>(dy/sqrt(dy*dy + dx*dx)),
+                                 static_cast<float>(-dx/sqrt(dy*dy + dx*dx))};
 
     // returns the eigenvalue at the cell
     return static_cast<float>(cell_V[0]*normal[0] + cell_V[1]*normal[1] + speed_o_sound_sonic);
@@ -407,18 +408,15 @@ void Solution::iterate() {
             }
 
             // half index notation is stupid. Henceforth, we will have i,j,i_offset,j_offset
-            sum_l_lamb = sqrt(dx_e*dx_e+dy_e*dy_e) * cizmas_lambda(i, j, 0.0f, 0.5f) +
-                        sqrt(dx_n*dx_n+dy_n*dy_n)  * cizmas_lambda(i, j, 0.5f, 0.0f) +
-                        sqrt(dx_w*dx_w+dy_w*dy_w)  * cizmas_lambda(i, j, 0.0f, -0.5f) +
-                        sqrt(dx_s*dx_s+dy_s*dy_s)  * cizmas_lambda(i, j, -0.5f, 0.0f);
+            sum_l_lamb = sqrt(pow(dx_e, 2)+pow(dy_e, 2)) * cizmas_lambda(i, j, 0.0f, 0.5f) +
+                        sqrt(pow(dx_n, 2)+pow(dy_n, 2))  * cizmas_lambda(i, j, 0.5f, 0.0f) +
+                        sqrt(pow(dx_w, 2)+pow(dy_w, 2))  * cizmas_lambda(i, j, 0.0f, -0.5f) +
+                        sqrt(pow(dx_s, 2)+pow(dy_s, 2))  * cizmas_lambda(i, j, -0.5f, 0.0f);
+
 
             // update the new q
             for (int k = 0; k<3; k++) {
                 new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * (res[k] - curr_dissipation[k])); // residual and dissipation
-            }
-            if (i==2 && j==25) {
-                std::cout << new_q[i][j][0] << ", " << new_q[i][j][1] << ", " << new_q[i][j][2] << ", " << new_q[i][j][3] << ", \n";
-                system("pause");
             }
         }
     }
