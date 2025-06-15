@@ -479,11 +479,10 @@ def run(x_list, y_list, mach):
         return np.float64(get_E(j,i) + get_p(j,i) / get_rho(j,i))
 
     it_number = 0
-    CFL = 1.4
+    CFL = 1.0
     while True: 
         max_res = np.zeros(4) # maximum residual in the whole iteration (numerically identify divergence of a few cells)
         ag_res = 0.0 # average residual for the current iteration
-        it_number += 1 # my iteration number just for my own bookkeeping
         print(it_number, end='      ')
 
         # dissipation calculators
@@ -537,6 +536,12 @@ def run(x_list, y_list, mach):
             a_cell =np.sqrt(gamma*R*get_T(jc, ic))
 
             vn_abs = np.abs(np.dot(n, V))
+
+            if (np.isclose(j, 2) and np.isclose(i, 30.5) and np.isclose(og, 1/2)):
+                print(f'taking velocity data from cell j={jc}, i={ic}\n\
+                        Velocity: {V} \n\
+                        Normal of {j,i}: {n}\n\
+                        value of {vn_abs + a_cell}')
 
             # if j >= 1 and it_number%4 == 0:
             #     print(f'EIGENVALUE requested at {j,i},', end=' ')
@@ -880,16 +885,23 @@ def run(x_list, y_list, mach):
 
                 # RK4 integration parameters
                 alphas = [1/4, 1/3, 1/2, 1.0]
-                delta_t = CFL * A / np.sum(np.array([lamb(jt,it, og=((j-jt)+(i-it)))*l(jt,it) for jt,it in zip([j+1/2, j, j-1/2, j],[i, i+1/2, i, i-1/2])]))
+                # BUG: needs to be a *2 in here.
+                sum_l_lamb = np.sum(np.array([lamb(jt,it, og=((j-jt)+(i-it)))*l(jt,it) for jt,it in zip([j+1/2, j, j-1/2, j],[i, i+1/2, i, i-1/2])]))
 
                 # prevent nan residuals
                 assert not np.isnan(np.dot(res, res)), "residual cannot be nan"
                 assert A>0.0
+
+                if i == 31 and j == 2: # big TE cell
+                    print(f'alphas[it_number]*2*CFL / sum_l_lamb): {alphas[it_number]}*2*{CFL} / {sum_l_lamb})')
+                    # something's up
+                    print(f'cell lambdas: {[(name, lamb(jt,it, og=((j-jt)+(i-it)))) for name, jt,it in zip(['north ', 'east ', 'south', 'west '], [j+1/2, j, j-1/2, j], [i, i+1/2, i, i-1/2])]}')
+                    for m in range(4):
+                        print(f'new_q[{m}] = {cell_data[j,i,m]} - {(alphas[it_number]*2*CFL / sum_l_lamb)}*{res[m]} - {D[m]}')
+
                 # calculate new state
                 # new_q[:] = cell_data[j,i,:] - (alphas[it_number%4]*delta_t / A) * (res - D) # RK iteration with CFL
-                new_q[:] = cell_data[j,i,:] - (delta_t/A) * (res - D) # RK iteration without CFL
-                # residual calculations
-
+                new_q[:] = cell_data[j,i,:] - ((alphas[it_number]*2*CFL / sum_l_lamb)) * (res - D) # RK iteration without CFL
                 ag_res += abs(np.linalg.norm(res))
                 if max(res) >= max(max_res):
                     max_res = res
@@ -961,7 +973,8 @@ def run(x_list, y_list, mach):
             # df.to_csv(f'j_max={len(x_list)-1},i_max={len(x_list[0])-1},M={round(mach, 1)}.csv')
             # del df # aha!
             # input()
-        
+        it_number += 1 # my iteration number just for my own bookkeeping
+
     exit() # only 1 iteration
 
     # print out the force on the bottom bump as well as a mach plot

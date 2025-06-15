@@ -46,7 +46,7 @@ void Solution::innit(arrayD3 _mesh_data) {
 
 float Solution::p(int i, int j) {
     // pressure (unused, invalid)
-    std::cout << "Pressure getter reporting";
+    std::cout << "Pressure getter reporting (shouldnt be called)\n";
     return 0.0;
 }     
 
@@ -66,7 +66,8 @@ float Solution::rho(int i, int j) {
 
 float Solution::e(int i, int j) {
     // unused, invalid
-    std::cout << "specific internal static energy getter reporting";
+    std::cout << "specific internal static energy getter reporting, invalid \n";
+    exit(1);
     return 0.0;
 }
 
@@ -74,7 +75,6 @@ float Solution::e(int i, int j) {
 // internal functions
 float Solution::l(int i, int j, float off_i, float off_j) {
     // returns the length of a cell wall given the wall's index in off-integer notation
-    std::cout << "length function reporting";
 
     // safety check
     if (off_i > 0.2 && off_j > 0.2) {
@@ -159,15 +159,15 @@ float Solution::cizmas_lambda(int i, int j, float off_i, float off_j) {
         dy = (mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1]);
         dx = (mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0]);
     }
-    if (off_i > 0.1) {
+    else if (off_i > 0.1) {
         dy = (mesh_data[i+1][j][1]-mesh_data[i+1][j+1][1]);
         dx = (mesh_data[i+1][j][0]-mesh_data[i+1][j+1][0]);
     }
-    if (off_j < 0.1) {
+    else if (off_j < -0.1) {
         dy = (mesh_data[i][j][1]-mesh_data[i+1][j][1]);
         dx = (mesh_data[i][j][0]-mesh_data[i+1][j][0]);
     }
-    if (off_i < 0.1) {
+    else /* if (off_i < -0.1)*/ {
         dy = (mesh_data[i][j+1][1]-mesh_data[i][j][1]);
         dx = (mesh_data[i][j+1][0]-mesh_data[i][j][0]);
     }
@@ -175,7 +175,20 @@ float Solution::cizmas_lambda(int i, int j, float off_i, float off_j) {
                                  static_cast<float>(-dx/sqrt(dy*dy + dx*dx))};
 
     // returns the eigenvalue at the cell
-    return static_cast<float>(cell_V[0]*normal[0] + cell_V[1]*normal[1] + speed_o_sound_sonic);
+    if (i==2 && j==31 && off_j < -0.1) {
+        std::cout << "\nInvestigate the deltas: for the west face:\n" << 
+        "dy =" << mesh_data[i][j][1] << "-" << mesh_data[i+1][j][1] <<
+        "dx =" << mesh_data[i][j][0]<< "-" << mesh_data[i+1][j][0] << "\n";
+
+        std::cout << "Eigenvalue calculator for west face: \n" <<
+        "base cell: " << i << ", " << j << " \n" << // going to be 2,31 no matter what you idiot (you are inside of an if statement)
+        "cell-wall offsets: " << off_i << ", " << off_j << "\n"
+        "speed fo sound" << speed_o_sound_sonic << "\n" <<
+        "velocity: {" << cell_V[0] << "," << cell_V[1] << "} \n" <<
+        "normal: {" << normal[0] << "," << normal[1] << "} \n"; 
+        system("pause");
+    }
+    return static_cast<float>(fabs(cell_V[0]*normal[0] + cell_V[1]*normal[1]) + speed_o_sound_sonic);
 }
 
 std::vector<float> Solution::D(int i, int j) {
@@ -409,10 +422,30 @@ void Solution::iterate() {
 
             // half index notation is stupid. Henceforth, we will have i,j,i_offset,j_offset
             sum_l_lamb = sqrt(pow(dx_e, 2)+pow(dy_e, 2)) * cizmas_lambda(i, j, 0.0f, 0.5f) +
-                        sqrt(pow(dx_n, 2)+pow(dy_n, 2))  * cizmas_lambda(i, j, 0.5f, 0.0f) +
-                        sqrt(pow(dx_w, 2)+pow(dy_w, 2))  * cizmas_lambda(i, j, 0.0f, -0.5f) +
-                        sqrt(pow(dx_s, 2)+pow(dy_s, 2))  * cizmas_lambda(i, j, -0.5f, 0.0f);
+                         sqrt(pow(dx_n, 2)+pow(dy_n, 2)) * cizmas_lambda(i, j, 0.5f, 0.0f) +
+                         sqrt(pow(dx_w, 2)+pow(dy_w, 2)) * cizmas_lambda(i, j, 0.0f, -0.5f) +
+                         sqrt(pow(dx_s, 2)+pow(dy_s, 2)) * cizmas_lambda(i, j, -0.5f, 0.0f);
 
+            // new q update debugging statement
+            if (i==2 && j==31) {
+                std::cout << "sum_l_lamb: " << sum_l_lamb << "\n";
+                for (int k = 0; k<=3; k++) {
+                    std::cout << "new q:[" << k << "] = " << q[i][j][k] << "-" << (alpha * CFL * 2 / sum_l_lamb) << "*" << (res[k] - curr_dissipation[k]) << "\n";
+                }
+
+                std::cout << "lengths\n" <<
+                            "east " << sqrt(pow(dx_e, 2)+pow(dy_e, 2)) << "\n" <<
+                            "north" << sqrt(pow(dx_n, 2)+pow(dy_n, 2)) << "\n" <<
+                            "west" << sqrt(pow(dx_w, 2)+pow(dy_w, 2)) << "\n" <<
+                            "south" << sqrt(pow(dx_s, 2)+pow(dy_s, 2)) << "\n";
+                std::cout << "Lambdas\n" <<
+                "east " << cizmas_lambda(i, j, 0.0f, 0.5f) << "\n" <<
+                "north " << cizmas_lambda(i, j, 0.5f, 0.0f) << "\n" <<
+                "west " << cizmas_lambda(i, j, 0.0f, -0.5f)<< "\n" <<
+                "south " << cizmas_lambda(i, j, -0.5f, 0.0f)     << "\n";
+                // speed of sound calculation has been confirmed to be the same
+                // That means either the normal or the velocity is a bit off
+            }
 
             // update the new q
             for (int k = 0; k<3; k++) {
