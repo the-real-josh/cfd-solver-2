@@ -8,7 +8,7 @@ int i_max;
 int j_max;
 int max_iterations;
 float t_infty; // kelvin
-float p_infty; // pascals
+float rho_infty; // pascals
 float mach_infty;
 std::string mesh_fname;
 std::string res_fname;
@@ -24,7 +24,7 @@ void get_config() {
     j_max = row["j_max"].get<int>();
     max_iterations = row["max_iterations"].get<int>();
     t_infty = row["t_infty"].get<float>();
-    p_infty = row["p_infty"].get<float>();
+    rho_infty = row["rho_infty"].get<float>();
     mach_infty = row["mach_infty"].get<float>();
     mesh_fname = row["mesh_fname"].get<std::string>(); 
     res_fname = row["res_fname"].get<std::string>();

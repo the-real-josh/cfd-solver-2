@@ -28,7 +28,7 @@ extern int i_max; // max index of the ghost nodes
 extern int j_max; // max index of the ghost nodes
 extern int max_iterations; // maximum number of iterations to perform
 extern float t_infty; // kelvin
-extern float p_infty; // pascals
+extern float rho_infty; // kg/m3
 extern float mach_infty;
 extern std::string mesh_fname;
 extern std::string res_fname;

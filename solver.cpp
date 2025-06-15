@@ -17,6 +17,11 @@ void Solution::innit(arrayD3 _mesh_data) {
     iteration_count = 0;
 
     std::cout << "i_max, j_max = " << i_max << "," << j_max << "\n";
+
+    float p_infty {static_cast<float>(rho_infty*R*t_infty)};
+    float u_infty {static_cast<float>(sqrt(gamma*R*t_infty)*mach_infty)};
+    float E_infty {static_cast<float>(0.5*pow(mach_infty * sqrt(gamma*R*t_infty), 2) + (cv*t_infty))};
+
     // system("pause");
 
     /*initialize arrays
@@ -31,15 +36,21 @@ void Solution::innit(arrayD3 _mesh_data) {
         g[i].resize(j_max);
         for (int j = 0; j<=j_max-1; j++) {
                 q[i][j] = std::vector<float>{
-                    static_cast<float>(p_infty / (R * t_infty)), // solve for density
-                    static_cast<float>((p_infty / (R * t_infty)) * (mach_infty * sqrt(gamma*R*t_infty))),
+                    static_cast<float>(rho_infty), // solve for density
+                    static_cast<float>(rho_infty*u_infty),
                     0.0f,
-                    static_cast<float>((p_infty/(R*t_infty))*(0.5*pow(mach_infty * sqrt(gamma*R*t_infty), 2) + (cv*t_infty)))
+                    static_cast<float>(rho_infty*E_infty)
                 };
                 f[i][j] = std::vector<float> {0.0f, 0.0f, 0.0f, 0.0f};
                 g[i][j] = std::vector<float> {0.0f, 0.0f, 0.0f, 0.0f};
         }
     }
+
+    std::cout << "Initial values: \nrho: " << rho_infty << "\n" 
+    "rho*u: " <<  (rho_infty) * (u_infty)  << "\n" <<
+    "rho*V: " << 0.0f << "\n" <<
+    "rho*E: " << (rho_infty)*(E_infty) << "\n";
+    
     new_q = q;
     update_BCs();
 }
@@ -175,19 +186,6 @@ float Solution::cizmas_lambda(int i, int j, float off_i, float off_j) {
                                  static_cast<float>(-dx/sqrt(dy*dy + dx*dx))};
 
     // returns the eigenvalue at the cell
-    if (i==2 && j==31 && off_j < -0.1) {
-        std::cout << "\nInvestigate the deltas: for the west face:\n" << 
-        "dy =" << mesh_data[i][j][1] << "-" << mesh_data[i+1][j][1] <<
-        "dx =" << mesh_data[i][j][0]<< "-" << mesh_data[i+1][j][0] << "\n";
-
-        std::cout << "Eigenvalue calculator for west face: \n" <<
-        "base cell: " << i << ", " << j << " \n" << // going to be 2,31 no matter what you idiot (you are inside of an if statement)
-        "cell-wall offsets: " << off_i << ", " << off_j << "\n"
-        "speed fo sound" << speed_o_sound_sonic << "\n" <<
-        "velocity: {" << cell_V[0] << "," << cell_V[1] << "} \n" <<
-        "normal: {" << normal[0] << "," << normal[1] << "} \n"; 
-        system("pause");
-    }
     return static_cast<float>(fabs(cell_V[0]*normal[0] + cell_V[1]*normal[1]) + speed_o_sound_sonic);
 }
 
@@ -221,13 +219,17 @@ void Solution::update_BCs() {
     int i_bdry;     // i value of the cell that is mirrored by the ghost cell (boundary cell)
     int i_ghost;    // i value of the ghost cell
 
+    float p_infty {static_cast<float>(rho_infty*R*t_infty)};
+    float u_infty {static_cast<float>(sqrt(gamma*R*t_infty)*mach_infty)};
+    float E_infty {static_cast<float>(0.5*pow(mach_infty * sqrt(gamma*R*t_infty), 2) + (cv*t_infty))};
+
 
     // inlet boundary condition 
     std::vector<float> q_inlet = {
-        static_cast<float>(p_infty/(R*t_infty)),                                                                // rho
-        static_cast<float>((p_infty/(R*t_infty))*(mach_infty*sqrt(gamma*R*t_infty))),                           // rho*u
+        static_cast<float>(rho_infty),                                                                // rho
+        static_cast<float>(rho_infty*u_infty),                           // rho*u
         0.0f,                                                                                                   // rho*v
-        static_cast<float>((p_infty/(R*t_infty))*(cv*t_infty + 0.5*pow(mach_infty*sqrt(gamma*R*t_infty), 2)))   // rho*E
+        static_cast<float>(rho_infty*E_infty)   // rho*E
     };
 
 
@@ -340,6 +342,12 @@ void Solution::update_f_g() {
             // probably pressure? idk it's a horribly complex recurring constant
             p = (new_q[i][j][3] - 0.5*(new_q[i][j][1]*new_q[i][j][1] + new_q[i][j][2]*new_q[i][j][2])/new_q[i][j][0])*(gamma-1); 
 
+            // p calculation debuging statement
+            if (i==2 && j==27) {
+                std::cout << "p = " << p << "=" << new_q[i][j][3] << "- 0.5*(" << new_q[i][j][1] << "*" << new_q[i][j][1] << "+" << new_q[i][j][2] << "*" << new_q[i][j][2] << ")/" << new_q[i][j][0] << ")*(gamma-1)\n";
+            }
+
+
             // update f
             f[i][j][0] = static_cast<float>(new_q[i][j][1]);
             f[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][1]/new_q[i][j][0] + p);
@@ -349,7 +357,7 @@ void Solution::update_f_g() {
             // update g
             g[i][j][0] = static_cast<float>(new_q[i][j][2]);
             g[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][2]/new_q[i][j][0]);
-            g[i][j][2] = static_cast<float>(new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] + p); // re-sign the square.
+            g[i][j][2] = static_cast<float>(new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] + p); 
             g[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][2]/new_q[i][j][0] + p*(new_q[i][j][2]/new_q[i][j][0]));
         }
     }
@@ -413,6 +421,15 @@ void Solution::iterate() {
                                              +0.5*(f[i][j][k] + f[i][j-1][k])*dy_w  +  0.5*(g[i][j][k] + g[i][j-1][k])*(-dx_w)        // west
                                              +0.5*(f[i][j][k] + f[i-1][j][k])*dy_s  +  0.5*(g[i][j][k] + g[i-1][j][k])*(-dx_s)        // south
                 );
+
+                // debugging print statement
+                if (j==27 && i==2 && k==2) {
+                    std::cout <<  0.5*(f[i][j][k] + f[i][j+1][k]) << "*" << dy_e << "+" << 0.5*(g[i][j][k] + g[i][j+1][k]) << "*" << (-dx_e) << "\n" << 
+                                 +0.5*(f[i][j][k] + f[i+1][j][k]) << "*" << dy_n << "+" << 0.5*(g[i][j][k] + g[i+1][j][k]) << "*" << (-dx_n) << "\n" << 
+                                 +0.5*(f[i][j][k] + f[i][j-1][k]) << "*" << dy_w << "+" << 0.5*(g[i][j][k] + g[i][j-1][k]) << "*" << (-dx_w) << "\n" << 
+                                 +0.5*(f[i][j][k] + f[i-1][j][k]) << "*" << dy_s << "+" << 0.5*(g[i][j][k] + g[i-1][j][k]) << "*" << (-dx_s) << "\n" <<
+                                 "= " << res[k] << "\n";
+                }
             }
 
             // calculate dissipation $\vec D$ every 4
@@ -427,7 +444,7 @@ void Solution::iterate() {
                          sqrt(pow(dx_s, 2)+pow(dy_s, 2)) * cizmas_lambda(i, j, -0.5f, 0.0f);
 
             // new q update debugging statement
-            if (i==2 && j==31) {
+            if (i==2 && j==27) {
                 std::cout << "sum_l_lamb: " << sum_l_lamb << "\n";
                 for (int k = 0; k<=3; k++) {
                     std::cout << "new q:[" << k << "] = " << q[i][j][k] << "-" << (alpha * CFL * 2 / sum_l_lamb) << "*" << (res[k] - curr_dissipation[k]) << "\n";

@@ -390,12 +390,14 @@ def run(x_list, y_list, mach):
     # initial gas properties
     gamma = 1.4 # ratio of specific heats
     R = 287.052874 # gas constant for air, J/(kg K)
-    rho_infty = 1.1766125010126185 # (kg/m3)
+    rho_infty = 1.1766 # (kg/m3)
     T_infty = 300.0 # if you took very warm air then expanded it to current mach
     a = np.sqrt(gamma * R * T_infty) # speed of sound (m/s)
     # E_inlet = 1.0/(rho * (gamma-1)) + 0.5 * mach**2 
     # E_inlet = 1.0/(gamma * (gamma-1)) + 0.5 * mach**2 # cizmas in the textbook 
-    cv = 1006.0 - R # J/kg k
+    
+    cp = (gamma*R/(gamma-1))
+    cv = cp - R # J/kg k
     V_inlet = a*mach
     E_inlet = T_infty*cv + 1/2 * (V_inlet)**2 # total energy at the inlet, J/kg
     p_infty = (T_infty*cv)*rho_infty * (gamma - 1) # use static energy (not stagnation)
@@ -795,6 +797,11 @@ def run(x_list, y_list, mach):
                     # calculate the f and g at the cells
                     qc = cell_data[jc1, ic1, :]
                     V = qc[1:3]/qc[0] # cell velocity
+
+                    if (jc1==2 and i==27):
+                        print(f'p = {(qc[3] - 0.5*qc[0]*np.dot(V, V))*(gamma-1)}\n=\
+                        {qc[3]} - {0.5}*{qc[0]}*{np.dot(V, V)}*(gamma-1)')
+
                     f1 = np.array([qc[1],
                                    qc[1]**2/qc[0] + (qc[3] - 0.5*qc[0]*np.dot(V, V))*(gamma-1),
                                    qc[1]*qc[2]/qc[0],
@@ -840,11 +847,20 @@ def run(x_list, y_list, mach):
                 del_y_west = (y_list[j,i] - y_list[j+1,i]);           del_x_west = (x_list[j,i] - x_list[j+1,i]  )         # delta x,y in west
                 del_y_south = y_list[j,i+1] - y_list[j,i];          del_x_south = (x_list[j,i+1] - x_list[j,i])         # delta x,y in south
 
-                # f_res_backup = f[0]*del_y_east + f[1]*del_y_north + f[2]*del_y_west + f[3]*del_y_south <-- but faster
-                f_res = f.T @ np.array([del_y_east, del_y_north, del_y_west, del_y_south])
-                g_res =  g.T @ np.array([del_x_east, del_x_north, del_x_west, del_x_south])
+                f_res = f[0]*del_y_east + f[1]*del_y_north + f[2]*del_y_west + f[3]*del_y_south
+                g_res = g[0]*-del_x_east + g[1]*-del_x_north + g[2]*-del_x_west + g[3]*-del_x_south
 
-                res = f_res - g_res
+                res = f_res + g_res
+
+                if (i==27 and j==2):
+                    temp = 2 # 0 is density
+                    print(f[0][temp]*del_y_east + f[1][temp]*del_y_north + f[2][temp]*del_y_west + f[3][temp]*del_y_south + g[0][temp]*-del_x_east + g[1][temp]*-del_x_north + g[2][temp]*-del_x_west + g[3][temp]*-del_x_south)
+                    # print(f'{f[0][temp]}*{del_y_east} + {f[1][temp]}*{del_y_north} + {f[2][temp]}*{del_y_west} + {f[3][temp]}*{del_y_south} + {g[0][temp]}*{-del_x_east} + {g[1][temp]}*{-del_x_north} + {g[2][temp]}*{-del_x_west} + {g[3][temp]}*{-del_x_south}')
+                    print(f'={f[0][temp]}*{del_y_east} + {g[0][temp]}*{-del_x_east} + \n\
+                    {f[1][temp]}*{del_y_north} + {g[1][temp]}*{-del_x_north}  + \n\
+                    {f[2][temp]}*{del_y_west} + {g[2][temp]}*{-del_x_west }+ \n\
+                    {f[3][temp]}*{del_y_south} + {g[3][temp]}*{-del_x_south}')
+                    del temp
 
                 # use JST dissipation term to reduce wiggles - https://i.imgur.com/pdUVsjX.png
                 def t1(jc,ic):
@@ -885,14 +901,13 @@ def run(x_list, y_list, mach):
 
                 # RK4 integration parameters
                 alphas = [1/4, 1/3, 1/2, 1.0]
-                # BUG: needs to be a *2 in here.
                 sum_l_lamb = np.sum(np.array([lamb(jt,it, og=((j-jt)+(i-it)))*l(jt,it) for jt,it in zip([j+1/2, j, j-1/2, j],[i, i+1/2, i, i-1/2])]))
 
                 # prevent nan residuals
                 assert not np.isnan(np.dot(res, res)), "residual cannot be nan"
                 assert A>0.0
 
-                if i == 31 and j == 2: # big TE cell
+                if i == 27 and j == 2: # big TE cell
                     print(f'alphas[it_number]*2*CFL / sum_l_lamb): {alphas[it_number]}*2*{CFL} / {sum_l_lamb})')
                     # something's up
                     print(f'cell lambdas: {[(name, lamb(jt,it, og=((j-jt)+(i-it)))) for name, jt,it in zip(['north ', 'east ', 'south', 'west '], [j+1/2, j, j-1/2, j], [i, i+1/2, i, i-1/2])]}')

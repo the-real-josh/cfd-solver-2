@@ -280,7 +280,7 @@ def run(mesh_core_dimensions=None, mach=None, mesh_fname=None, results_fname=Non
 
     # other givens required to fix the state
     T_infty = 300.0
-    p_infty = 101325.0
+    rho_infty = 1.1766
 
     # update commands.txt
 
@@ -290,7 +290,7 @@ def run(mesh_core_dimensions=None, mach=None, mesh_fname=None, results_fname=Non
          'j_max': mesh_core_dimensions[1] + 4,
          'max_iterations': max_iterations, 
          't_infty': T_infty,
-         'p_infty': p_infty,
+         'rho_infty': rho_infty,
          'mach_infty': mach,
          'mesh_fname': mesh_fname,
          'res_fname': results_fname}
