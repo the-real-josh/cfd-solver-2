@@ -339,13 +339,6 @@ void Solution::update_f_g(int i, int j) {
     // confirmed correct (check 'proofs for fluxes.py')
     float p = (new_q[i][j][3] - 0.5*(new_q[i][j][1]*new_q[i][j][1] + new_q[i][j][2]*new_q[i][j][2])/new_q[i][j][0])*(gamma-1);
 
-    // p calculation debuging statement
-    // if (i==2 && j==23) {
-    //     std::cout << "p = " << p << "=" << new_q[i][j][3] << "- 0.5*(" << new_q[i][j][1] << "*" << new_q[i][j][1] << "+" << new_q[i][j][2] << "*" << new_q[i][j][2] << ")/" << new_q[i][j][0] << ")*(gamma-1)\n";
-    //     std::cout << new_q[i][j][3]*new_q[i][j][1]/new_q[i][j][0] + p*(new_q[i][j][1]/new_q[i][j][0]) << "=" <<
-    //     new_q[i][j][3] << "*" << new_q[i][j][1] << "/" << new_q[i][j][0]  << " + " <<  p << "*(" << new_q[i][j][1] << "/" << new_q[i][j][0] << ")\n"; 
-    // }
-
     // update f
     f[i][j][0] = static_cast<float>(new_q[i][j][1]);
     f[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][1]/new_q[i][j][0] + p);
@@ -368,7 +361,6 @@ arrayD3 Solution::get_q() {
 
 void Solution::iterate() {
     /* conduct one iteration*/
-    // std::cout << "Iteration " << iteration_count << "\n";
     
     // get iteration alpha constant
     constexpr float alpha_values[] = {0.25f, 0.3333334f, 0.5f, 1.0f};
@@ -419,14 +411,6 @@ void Solution::iterate() {
             dx_s =  (mesh_data[i][j+1][0]-mesh_data[i][j][0]);
 
 
-            if (j==23 && i==2) {
-                std::cout << "------ " << f[i+1][j][0] << "------ \n" <<
-                f[i][j-1][0] << "," << f[i][j][0] <<  "," << f[i][j+1][0] << "\n" << 
-                "------ " << f[i-1][j][0] << " ------\n";
-                // std::cout << "for clarity in the confusion, f[i][j-1][0] was last seen as " << f[i][j-1][0];
-                // std::cout << "f[i][j-1][0] = " << f[i][j-1][0] << std::endl;
-            }
-
             // multiply f by dy and g by (-dx). The reason for the x-y and sign reversal is to make the wall delta into a normal
             for (int k = 0; k<=3; k++) {
                 res[k] = static_cast<float>(  0.5*(f[i][j][k] + f[i][j+1][k])*dy_e  +  0.5*(g[i][j][k] + g[i][j+1][k])*(-dx_e)        // east
@@ -435,14 +419,6 @@ void Solution::iterate() {
                                              +0.5*(f[i][j][k] + f[i-1][j][k])*dy_s  +  0.5*(g[i][j][k] + g[i-1][j][k])*(-dx_s)        // south
                 );
 
-                // // debugging print statement
-                // if (j==23 && i==2 && k==2) {
-                //     std::cout <<  0.5*(f[i][j][k] + f[i][j+1][k]) << "*" << dy_e << "+" << 0.5*(g[i][j][k] + g[i][j+1][k]) << "*" << (-dx_e) << "\n" << 
-                //                  +0.5*(f[i][j][k] + f[i+1][j][k]) << "*" << dy_n << "+" << 0.5*(g[i][j][k] + g[i+1][j][k]) << "*" << (-dx_n) << "\n" << 
-                //                  +0.5*(f[i][j][k] + f[i][j-1][k]) << "*" << dy_w << "+" << 0.5*(g[i][j][k] + g[i][j-1][k]) << "*" << (-dx_w) << "\n" << 
-                //                  +0.5*(f[i][j][k] + f[i-1][j][k]) << "*" << dy_s << "+" << 0.5*(g[i][j][k] + g[i-1][j][k]) << "*" << (-dx_s) << "\n" <<
-                //                  "= " << res[k] << "\n";
-                // }
             }
 
             // calculate dissipation $\vec D$ every 4
@@ -456,28 +432,8 @@ void Solution::iterate() {
                          sqrt(pow(dx_w, 2)+pow(dy_w, 2)) * cizmas_lambda(i, j, 0.0f, -0.5f) +
                          sqrt(pow(dx_s, 2)+pow(dy_s, 2)) * cizmas_lambda(i, j, -0.5f, 0.0f);
 
-            // new q update debugging statement
-            if (i==2 && j==23) {
-                //std::cout << "sum_l_lamb: " << sum_l_lamb << "\n";
-                for (int k = 0; k<=3; k++) {
-                    std::cout << "new q:[" << k << "] = " << q[i][j][k] << "-" << (alpha * CFL * 2 / sum_l_lamb) << "*" << (res[k] - curr_dissipation[k]) << "\n";
-                }
-
-            //     std::cout << "lengths\n" <<
-            //                 "east " << sqrt(pow(dx_e, 2)+pow(dy_e, 2)) << "\n" <<
-            //                 "north" << sqrt(pow(dx_n, 2)+pow(dy_n, 2)) << "\n" <<
-            //                 "west" << sqrt(pow(dx_w, 2)+pow(dy_w, 2)) << "\n" <<
-            //                 "south" << sqrt(pow(dx_s, 2)+pow(dy_s, 2)) << "\n";
-            //     std::cout << "Lambdas\n" <<
-            //     "east " << cizmas_lambda(i, j, 0.0f, 0.5f) << "\n" <<
-            //     "north " << cizmas_lambda(i, j, 0.5f, 0.0f) << "\n" <<
-            //     "west " << cizmas_lambda(i, j, 0.0f, -0.5f)<< "\n" <<
-            //     "south " << cizmas_lambda(i, j, -0.5f, 0.0f)     << "\n";
-            //     // speed of sound calculation has been confirmed to be the same
-            //     // That means either the normal or the velocity is a bit off
-            }
-
             // update the new q
+            std::cout << "Iteration " << iteration_count << "\n";
             for (int k = 0; k<4; k++) {
                 new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * (res[k] - curr_dissipation[k])); // residual and dissipation
             }
@@ -486,10 +442,6 @@ void Solution::iterate() {
     }
 
     update_BCs();           // update the boundary conditions to match inner calculations
-
-    // for (int i = 21; i<32; i++) {
-    //     new_q
-    // }
 
     // update q based on intermediate q
     if (iteration_count%4 == 3) {
