@@ -753,55 +753,12 @@ def run(x_list, y_list, mach):
                 
                 # calculate the fluxes between cells with averaging between the cell values
 
-                enws = [(0, 1/2), (1/2, 0), (0, -1/2), (-1/2, 0)] # calculate f and g fluxes for east, north, west, south (this is j,i)
-                for k in range(len(enws)):         
-                    """ becomes lamb_xi or lamb_eta depending on what axis the off-integer value is in \n
-                        off integer in i  -  lamb xi  -  north velocity
-                        off integer in j  -  lamb eta -  east velocity
-                    
-                    input: off-integer in EITHER j or i \n
-                    returns: the absolute wall-normal velocity component, with respect to the wall corresponding to the half-index """
-
-                    j_f, i_f = j+enws[k][0], i+enws[k][1] # create boundary (off-integer) indeces
-                    # print(f'k={k}, calculating flux on {j_f,i_f}')
-
-                    # bottom/left node
-                    j_base = int(np.round(j_f-epsilon)) # 5
-                    i_base = int(np.round(i_f-epsilon)) # 4
-
-                    # whether to round up or not
-                    j_round = int(np.round(j_f-j_base+epsilon)) # 1        0 or 1
-                    i_round = int(np.round(i_f-i_base+epsilon)) # 0           
-
-                    # print(f'rounding bools: {j_round, i_round}')
-
-                    # j_split = int(not np.isclose(i_round, 0))
-                    # i_split = int(not np.isclose(j_round, 0))
-
-                    # node indeces
-                    # j1 = j_base + j_round
-                    # j2 = j_base + j_round + j_split
-
-                    # i1 = i_base + i_round
-                    # i2 = i_base + i_round + i_split
-
-                    # cell indeces
-                    jc1 = j_base + j_round
-                    ic1 = i_base + i_round
-
-                    jc2 = j_base
-                    ic2 = i_base
-
-                    # print(f'averaging "fluxes" between {jc1, ic1} and {jc2, ic2}')
-
-                    # calculate the f and g at the cells
-                    qc = cell_data[jc1, ic1, :]
+                enws = [(0, 1), (1, 0), (0, -1), (-1, 0)] # calculate f and g fluxes for east, north, west, south (this is j,i)
+                for k in range(len(enws)):   
+                    # base f and g      
+                    qc = cell_data[j, i, :]
                     V = qc[1:3]/qc[0] # cell velocity
-
-                    if (jc1==2 and i==27):
-                        print(f'p = {(qc[3] - 0.5*qc[0]*np.dot(V, V))*(gamma-1)}\n=\
-                        {qc[3]} - {0.5}*{qc[0]}*{np.dot(V, V)}*(gamma-1)')
-
+                    p = (qc[3] - 0.5*qc[0]*np.dot(V, V))*(gamma-1)
                     f1 = np.array([qc[1],
                                    qc[1]**2/qc[0] + (qc[3] - 0.5*qc[0]*np.dot(V, V))*(gamma-1),
                                    qc[1]*qc[2]/qc[0],
@@ -811,14 +768,8 @@ def run(x_list, y_list, mach):
                                    qc[2]**2/qc[0] + (qc[3] - 0.5*qc[0]*np.dot(V, V))*(gamma-1),
                                    (qc[3] + (qc[3] - 0.5*qc[0]*np.dot(V, V))*(gamma-1))*(qc[2]/qc[0])])
 
-                    if loud:
-                        print(f'qc({jc1,ic1}):\
-                            {qc}')
-                        print(f'f1: {f1}\n\
-                            g1: {g1}\n')
-                        
-
-                    qc = cell_data[jc2, ic2, :]
+                    # side of interest f and g
+                    qc = cell_data[j+enws[k][0], i+enws[k][1], :]
                     V = qc[1:3]/qc[0] # cell velocity
                     f2 = np.array([qc[1],
                                    qc[1]**2/qc[0] + (qc[3] - 0.5*qc[0]*np.dot(V, V))*(gamma-1),
@@ -828,18 +779,23 @@ def run(x_list, y_list, mach):
                                    qc[1]*qc[2]/qc[0],
                                    qc[2]**2/qc[0] + (qc[3] - 0.5*qc[0]*np.dot(V, V))*(gamma-1),
                                    (qc[3] + (qc[3] - 0.5*qc[0]*np.dot(V, V))*(gamma-1))*(qc[2]/qc[0])])
+                    if (j==2 and i==23):
+                        print(f'qc[1] is {qc[1]}, and is located at j,i={j, i}')
+                        print(f'p = {p} = {qc[3]} - {0.5}*{qc[0]}*{np.dot(V, V)}*(gamma-1)')
+                        print(f'{qc[3]*qc[1]/qc[0] + p*(qc[1]/qc[0])}={qc[3]}*{qc[1]}/{qc[0]} + {p}*({qc[1]}/{qc[0]})')
+                        print(f1[0])
 
-                    if loud:
-                        print(f'qc({jc2,ic2}):\
-                            {qc}')
-                        print(f'f1: {f2}\n\
-                            g1: {g2}\n')
 
                     # average the vectors to get the f and g at the faces
                     # f and g are lists of the fluxes through each of the boundaries
                     f[k, :] = 0.5*(f1[:] + f2[:])
                     g[k, :] = 0.5*(g1[:] + g2[:])
 
+                if j==2 and i==23:
+                    print(f'f density fluxes')
+                    for k in range(4):
+                        print(f[k][0])
+                    # print(f'------------, {f[jc1+1, ic1, 0]}, ------------\n{f[jc1, ic1-1:ic1+2, 0]}\n------------, {f[jc1-1, ic1, 0]}, ------------')
 
                 # deltas (counterclockwise)
                 del_y_east = (y_list[j+1,i+1] - y_list[j,i+1]);       del_x_east = (x_list[j+1,i+1] - x_list[j,i+1])   # delta x,y in east
@@ -852,7 +808,7 @@ def run(x_list, y_list, mach):
 
                 res = f_res + g_res
 
-                if (i==27 and j==2):
+                if (i==23 and j==2):
                     temp = 2 # 0 is density
                     print(f[0][temp]*del_y_east + f[1][temp]*del_y_north + f[2][temp]*del_y_west + f[3][temp]*del_y_south + g[0][temp]*-del_x_east + g[1][temp]*-del_x_north + g[2][temp]*-del_x_west + g[3][temp]*-del_x_south)
                     # print(f'{f[0][temp]}*{del_y_east} + {f[1][temp]}*{del_y_north} + {f[2][temp]}*{del_y_west} + {f[3][temp]}*{del_y_south} + {g[0][temp]}*{-del_x_east} + {g[1][temp]}*{-del_x_north} + {g[2][temp]}*{-del_x_west} + {g[3][temp]}*{-del_x_south}')
@@ -907,7 +863,7 @@ def run(x_list, y_list, mach):
                 assert not np.isnan(np.dot(res, res)), "residual cannot be nan"
                 assert A>0.0
 
-                if i == 27 and j == 2: # big TE cell
+                if i == 23 and j == 2: # big TE cell
                     print(f'alphas[it_number]*2*CFL / sum_l_lamb): {alphas[it_number]}*2*{CFL} / {sum_l_lamb})')
                     # something's up
                     print(f'cell lambdas: {[(name, lamb(jt,it, og=((j-jt)+(i-it)))) for name, jt,it in zip(['north ', 'east ', 'south', 'west '], [j+1/2, j, j-1/2, j], [i, i+1/2, i, i-1/2])]}')

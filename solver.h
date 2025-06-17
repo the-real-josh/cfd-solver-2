@@ -55,7 +55,7 @@ class Solution {
         // private functions (internal workings)
 
         void update_BCs();               // enforce boundary conditions
-        void update_f_g();
+        void update_f_g(int i, int j);
 
         // simple state getters
         float p(int i, int j);                  // get pressure at a cell

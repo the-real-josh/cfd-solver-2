@@ -53,6 +53,7 @@ void Solution::innit(arrayD3 _mesh_data) {
     
     new_q = q;
     update_BCs();
+    q = new_q;
 }
 
 float Solution::p(int i, int j) {
@@ -333,34 +334,32 @@ void Solution::update_BCs() {
 
 
 
-void Solution::update_f_g() {
+void Solution::update_f_g(int i, int j) {
     // changed from being based on q to being based on new_q
     // confirmed correct (check 'proofs for fluxes.py')
-    float p;
-    for (int i = 0; i<i_max; i++) {
-        for (int j = 0; j<j_max; j++) {
-            // probably pressure? idk it's a horribly complex recurring constant
-            p = (new_q[i][j][3] - 0.5*(new_q[i][j][1]*new_q[i][j][1] + new_q[i][j][2]*new_q[i][j][2])/new_q[i][j][0])*(gamma-1); 
+    float p = (new_q[i][j][3] - 0.5*(new_q[i][j][1]*new_q[i][j][1] + new_q[i][j][2]*new_q[i][j][2])/new_q[i][j][0])*(gamma-1);
 
-            // p calculation debuging statement
-            if (i==2 && j==27) {
-                std::cout << "p = " << p << "=" << new_q[i][j][3] << "- 0.5*(" << new_q[i][j][1] << "*" << new_q[i][j][1] << "+" << new_q[i][j][2] << "*" << new_q[i][j][2] << ")/" << new_q[i][j][0] << ")*(gamma-1)\n";
-            }
+    // p calculation debuging statement
+    // if (i==2 && j==23) {
+    //     std::cout << "p = " << p << "=" << new_q[i][j][3] << "- 0.5*(" << new_q[i][j][1] << "*" << new_q[i][j][1] << "+" << new_q[i][j][2] << "*" << new_q[i][j][2] << ")/" << new_q[i][j][0] << ")*(gamma-1)\n";
+    //     std::cout << new_q[i][j][3]*new_q[i][j][1]/new_q[i][j][0] + p*(new_q[i][j][1]/new_q[i][j][0]) << "=" <<
+    //     new_q[i][j][3] << "*" << new_q[i][j][1] << "/" << new_q[i][j][0]  << " + " <<  p << "*(" << new_q[i][j][1] << "/" << new_q[i][j][0] << ")\n"; 
+    // }
 
+    // update f
+    f[i][j][0] = static_cast<float>(new_q[i][j][1]);
+    f[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][1]/new_q[i][j][0] + p);
+    f[i][j][2] = static_cast<float>(new_q[i][j][1]*new_q[i][j][2]/new_q[i][j][0]);
+    f[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][1]/new_q[i][j][0] + p*(new_q[i][j][1]/new_q[i][j][0]));
 
-            // update f
-            f[i][j][0] = static_cast<float>(new_q[i][j][1]);
-            f[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][1]/new_q[i][j][0] + p);
-            f[i][j][2] = static_cast<float>(new_q[i][j][1]*new_q[i][j][2]/new_q[i][j][0]);
-            f[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][1]/new_q[i][j][0] + p*(new_q[i][j][1]/new_q[i][j][0]));
+    // update g
+    g[i][j][0] = static_cast<float>(new_q[i][j][2]);
+    g[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][2]/new_q[i][j][0]);
+    g[i][j][2] = static_cast<float>(new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] + p); 
+    g[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][2]/new_q[i][j][0] + p*(new_q[i][j][2]/new_q[i][j][0])); // for clarity in the confusion, f[i][j-1][0] was last seen as 122.5620*0.0775929+101324*0.0158403 ??????
+    // static cast???
 
-            // update g
-            g[i][j][0] = static_cast<float>(new_q[i][j][2]);
-            g[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][2]/new_q[i][j][0]);
-            g[i][j][2] = static_cast<float>(new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] + p); 
-            g[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][2]/new_q[i][j][0] + p*(new_q[i][j][2]/new_q[i][j][0]));
-        }
-    }
+    
 }
 
 arrayD3 Solution::get_q() {
@@ -369,7 +368,7 @@ arrayD3 Solution::get_q() {
 
 void Solution::iterate() {
     /* conduct one iteration*/
-    std::cout << "Iteration " << iteration_count << "\n";
+    // std::cout << "Iteration " << iteration_count << "\n";
     
     // get iteration alpha constant
     constexpr float alpha_values[] = {0.25f, 0.3333334f, 0.5f, 1.0f};
@@ -392,7 +391,12 @@ void Solution::iterate() {
     std::vector<float> res(4, 0);
     std::vector<float> curr_dissipation(4, 0);
 
-    update_f_g(); // calculate all f and g for the iteration (correct)
+    // update all f and g
+    for (int i = 0; i<i_max; i++) {
+        for (int j = 0; j<j_max; j++) {
+            update_f_g(i,j); // calculate all f and g for the iteration (correct)
+        }   
+    }
 
     for (int i = 2; i<i_max-2; i++) { // start and end at 2, <i_max-2 because we do not generate a residual for ghost cells (BCs take care of that)
         for (int j = 2; j<j_max-2; j++) {
@@ -401,7 +405,7 @@ void Solution::iterate() {
             area = static_cast<float>(0.5*((mesh_data[i+1][j+1][0] - mesh_data[i][j][0])    *   (mesh_data[i+1][j][1] - mesh_data[i][j+1][1]) - 
                                     (mesh_data[i+1][j+1][1] - mesh_data[i][j][1])          *   (mesh_data[i+1][j][0] - mesh_data[i][j+1][0])));
 
-            // cell wall deltas
+            // cell wall deltas (correct and in-line with py script)
             dy_e =  (mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1]);
             dx_e =  (mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0]);
 
@@ -414,6 +418,15 @@ void Solution::iterate() {
             dy_s =  (mesh_data[i][j+1][1]-mesh_data[i][j][1]);
             dx_s =  (mesh_data[i][j+1][0]-mesh_data[i][j][0]);
 
+
+            if (j==23 && i==2) {
+                std::cout << "------ " << f[i+1][j][0] << "------ \n" <<
+                f[i][j-1][0] << "," << f[i][j][0] <<  "," << f[i][j+1][0] << "\n" << 
+                "------ " << f[i-1][j][0] << " ------\n";
+                // std::cout << "for clarity in the confusion, f[i][j-1][0] was last seen as " << f[i][j-1][0];
+                // std::cout << "f[i][j-1][0] = " << f[i][j-1][0] << std::endl;
+            }
+
             // multiply f by dy and g by (-dx). The reason for the x-y and sign reversal is to make the wall delta into a normal
             for (int k = 0; k<=3; k++) {
                 res[k] = static_cast<float>(  0.5*(f[i][j][k] + f[i][j+1][k])*dy_e  +  0.5*(g[i][j][k] + g[i][j+1][k])*(-dx_e)        // east
@@ -422,14 +435,14 @@ void Solution::iterate() {
                                              +0.5*(f[i][j][k] + f[i-1][j][k])*dy_s  +  0.5*(g[i][j][k] + g[i-1][j][k])*(-dx_s)        // south
                 );
 
-                // debugging print statement
-                if (j==27 && i==2 && k==2) {
-                    std::cout <<  0.5*(f[i][j][k] + f[i][j+1][k]) << "*" << dy_e << "+" << 0.5*(g[i][j][k] + g[i][j+1][k]) << "*" << (-dx_e) << "\n" << 
-                                 +0.5*(f[i][j][k] + f[i+1][j][k]) << "*" << dy_n << "+" << 0.5*(g[i][j][k] + g[i+1][j][k]) << "*" << (-dx_n) << "\n" << 
-                                 +0.5*(f[i][j][k] + f[i][j-1][k]) << "*" << dy_w << "+" << 0.5*(g[i][j][k] + g[i][j-1][k]) << "*" << (-dx_w) << "\n" << 
-                                 +0.5*(f[i][j][k] + f[i-1][j][k]) << "*" << dy_s << "+" << 0.5*(g[i][j][k] + g[i-1][j][k]) << "*" << (-dx_s) << "\n" <<
-                                 "= " << res[k] << "\n";
-                }
+                // // debugging print statement
+                // if (j==23 && i==2 && k==2) {
+                //     std::cout <<  0.5*(f[i][j][k] + f[i][j+1][k]) << "*" << dy_e << "+" << 0.5*(g[i][j][k] + g[i][j+1][k]) << "*" << (-dx_e) << "\n" << 
+                //                  +0.5*(f[i][j][k] + f[i+1][j][k]) << "*" << dy_n << "+" << 0.5*(g[i][j][k] + g[i+1][j][k]) << "*" << (-dx_n) << "\n" << 
+                //                  +0.5*(f[i][j][k] + f[i][j-1][k]) << "*" << dy_w << "+" << 0.5*(g[i][j][k] + g[i][j-1][k]) << "*" << (-dx_w) << "\n" << 
+                //                  +0.5*(f[i][j][k] + f[i-1][j][k]) << "*" << dy_s << "+" << 0.5*(g[i][j][k] + g[i-1][j][k]) << "*" << (-dx_s) << "\n" <<
+                //                  "= " << res[k] << "\n";
+                // }
             }
 
             // calculate dissipation $\vec D$ every 4
@@ -444,34 +457,39 @@ void Solution::iterate() {
                          sqrt(pow(dx_s, 2)+pow(dy_s, 2)) * cizmas_lambda(i, j, -0.5f, 0.0f);
 
             // new q update debugging statement
-            if (i==2 && j==27) {
-                std::cout << "sum_l_lamb: " << sum_l_lamb << "\n";
+            if (i==2 && j==23) {
+                //std::cout << "sum_l_lamb: " << sum_l_lamb << "\n";
                 for (int k = 0; k<=3; k++) {
                     std::cout << "new q:[" << k << "] = " << q[i][j][k] << "-" << (alpha * CFL * 2 / sum_l_lamb) << "*" << (res[k] - curr_dissipation[k]) << "\n";
                 }
 
-                std::cout << "lengths\n" <<
-                            "east " << sqrt(pow(dx_e, 2)+pow(dy_e, 2)) << "\n" <<
-                            "north" << sqrt(pow(dx_n, 2)+pow(dy_n, 2)) << "\n" <<
-                            "west" << sqrt(pow(dx_w, 2)+pow(dy_w, 2)) << "\n" <<
-                            "south" << sqrt(pow(dx_s, 2)+pow(dy_s, 2)) << "\n";
-                std::cout << "Lambdas\n" <<
-                "east " << cizmas_lambda(i, j, 0.0f, 0.5f) << "\n" <<
-                "north " << cizmas_lambda(i, j, 0.5f, 0.0f) << "\n" <<
-                "west " << cizmas_lambda(i, j, 0.0f, -0.5f)<< "\n" <<
-                "south " << cizmas_lambda(i, j, -0.5f, 0.0f)     << "\n";
-                // speed of sound calculation has been confirmed to be the same
-                // That means either the normal or the velocity is a bit off
+            //     std::cout << "lengths\n" <<
+            //                 "east " << sqrt(pow(dx_e, 2)+pow(dy_e, 2)) << "\n" <<
+            //                 "north" << sqrt(pow(dx_n, 2)+pow(dy_n, 2)) << "\n" <<
+            //                 "west" << sqrt(pow(dx_w, 2)+pow(dy_w, 2)) << "\n" <<
+            //                 "south" << sqrt(pow(dx_s, 2)+pow(dy_s, 2)) << "\n";
+            //     std::cout << "Lambdas\n" <<
+            //     "east " << cizmas_lambda(i, j, 0.0f, 0.5f) << "\n" <<
+            //     "north " << cizmas_lambda(i, j, 0.5f, 0.0f) << "\n" <<
+            //     "west " << cizmas_lambda(i, j, 0.0f, -0.5f)<< "\n" <<
+            //     "south " << cizmas_lambda(i, j, -0.5f, 0.0f)     << "\n";
+            //     // speed of sound calculation has been confirmed to be the same
+            //     // That means either the normal or the velocity is a bit off
             }
 
             // update the new q
-            for (int k = 0; k<3; k++) {
+            for (int k = 0; k<4; k++) {
                 new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * (res[k] - curr_dissipation[k])); // residual and dissipation
             }
+            update_f_g(i,j); // update f and g for the current cell
         }
     }
 
     update_BCs();           // update the boundary conditions to match inner calculations
+
+    // for (int i = 21; i<32; i++) {
+    //     new_q
+    // }
 
     // update q based on intermediate q
     if (iteration_count%4 == 3) {
