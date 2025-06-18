@@ -206,46 +206,37 @@ std::vector<float> Solution::D(int i, int j) {
     std::vector<float> vec_4;
     std::vector<float> final_dissipation;
 
+    // 2nd order coefficients
     float coeff_1 = switch_2_xi(i,j,0.0f,1/2) * l(i,j,0.0f,1/2) * cizmas_lambda(i,j,0.0f,1/2);
     float coeff_2 = switch_2_xi(i,j,0.0f,-1/2) * l(i,j,0.0f,-1/2) * cizmas_lambda(i,j,0.0f,-1/2);
-    for (int k = 0; k<4; k++) {
-        vec_1.push_back((new_q[i][j+1][k] - new_q[i][j][k])*coeff_1  -  (new_q[i][j][k] - new_q[i][j-1][k])*coeff_2);
-    }
-
     float coeff_3 = switch_2_eta(i,j,1/2,0.0f) * l(i,j,1/2, 0.0f) * cizmas_lambda(i,j,1/2, 0.0f);
     float coeff_4 = switch_2_eta(i,j,-1/2,0.0f) * l(i,j,-1/2, 0.0f) * cizmas_lambda(i,j,-1/2, 0.0f);
-    for (int k = 0; k<4; k++) {
-        vec_2.push_back((new_q[i+1][j][k] - new_q[i][j][k])*coeff_3  -  (new_q[i][j][k] - new_q[i-1][j][k])*coeff_4);
-    }
 
+    // 4th order coefficients
     float coeff_5 = switch_4_xi(i,j,0.0f,1/2) * l(i,j,0.0f,1/2) * cizmas_lambda(i,j,0.0f,1/2);
     float coeff_6 = switch_4_xi(i,j,0.0f,-1/2) * l(i,j,0.0f,-1/2) * cizmas_lambda(i,j,0.0f,-1/2);
-    for (int k = 0; k<4; k++) {
-        vec_3.push_back((new_q[i][j+2][k] - 3*new_q[i][j+1][k] + 4*new_q[i][j][k] - new_q[i-1][j][k])*coeff_5 - 
-        (new_q[i][j+1][k] - 3*new_q[i][j][k] + 4*new_q[i][j-1][k] - new_q[i][j-2][k])*coeff_6);
-    }
-
     float coeff_7 = switch_4_eta(i,j,1/2,0.0f) * l(i,j,1/2,0.0f) * cizmas_lambda(i,j,1/2,0.0f);
     float coeff_8 = switch_4_eta(i,j,-1/2,0.0f) * l(i,j,-1/2,0.0f) * cizmas_lambda(i,j,-1/2,0.0f);
+
     for (int k = 0; k<4; k++) {
+        // 2nd order
+        vec_1.push_back((new_q[i][j+1][k] - new_q[i][j][k])*coeff_1  -  (new_q[i][j][k] - new_q[i][j-1][k])*coeff_2);
+        vec_2.push_back((new_q[i+1][j][k] - new_q[i][j][k])*coeff_3  -  (new_q[i][j][k] - new_q[i-1][j][k])*coeff_4);
+
+        // 4th order
+        vec_3.push_back((new_q[i][j+2][k] - 3*new_q[i][j+1][k] + 4*new_q[i][j][k] - new_q[i-1][j][k])*coeff_5 - 
+        (new_q[i][j+1][k] - 3*new_q[i][j][k] + 4*new_q[i][j-1][k] - new_q[i][j-2][k])*coeff_6);
+
         vec_4.push_back((new_q[i+2][j][k] - 3*new_q[i+1][j][k] + 4*new_q[i][j][k] - q[i-1][j][k])*coeff_7 - 
         (new_q[i+1][j][k] - 3*new_q[i][j][k] + 4*new_q[i-1][j][k] - q[i-2][j][k])*coeff_8);
     }
 
-
-    /*input: 
-        j and i cells
-    body;
-        calculates second order dissipations
-        calculates fourth order dissipations
-    returns:
-        total dissipations*/
     
     // sum all the terms
     for (int k = 0; k<4; k++) {
         final_dissipation.push_back(vec_1[k] + vec_2[k] - vec_3[k] - vec_4[k]);
     }
-    // return final_dissipation;
+
     return final_dissipation;
 }
 

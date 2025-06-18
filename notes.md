@@ -22,4 +22,14 @@ https://medium.com/@samsorrahman/how-to-run-a-makefile-in-windows-b4d115d7c516
 ## help on writing the solver
 https://stackoverflow.com/questions/7910364/beginners-guide-to-own-cfd-code-2d-euler-equation
 
+
+now we play a game called where is the dissipation error?
+Fluxes:
+ - f and g calculation (not there, see python script proof)
+ - f and g references (unlikely)
+
+Dissipations:
+ - switches
+ - 
+
  
