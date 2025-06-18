@@ -10,6 +10,9 @@ using arrayD3 = std::vector<std::vector<std::vector<float>>>;
 using arrayD2 = std::vector<std::vector<float>>;
 
 #define CFL 1.0
+#define nu_2 0.25
+#define nu_4 0.00390625
+
 #define R 287.052
 #define pi 3.1415
 #define gamma 1.4
@@ -65,8 +68,12 @@ class Solution {
     
         // advanced numerical finders
         float l(int i, int j, float off_i, float off_j);              // length of cell wall (input off-integer values)
-        float lambda(float i, float j);         // eigenvalue of cell at the wall (input off-integer values)
         float cizmas_lambda(int i, int j, float off_i, float off_j);
+
+        float switch_2_xi(int i, int j, float off_i, float off_j);
+        float switch_2_eta(int i, int j, float off_i, float off_j);
+        float switch_4_xi(int i, int j, float off_i, float off_j);
+        float switch_4_eta(int i, int j, float off_i, float off_j);
 
         std::vector<float> D(int i, int j);              // dissipation at the cell
     };

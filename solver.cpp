@@ -57,9 +57,8 @@ void Solution::innit(arrayD3 _mesh_data) {
 }
 
 float Solution::p(int i, int j) {
-    // pressure (unused, invalid)
-    std::cout << "Pressure getter reporting (shouldnt be called)\n";
-    return 0.0;
+    // pressure used only for dissipation
+    return static_cast<float>((new_q[i][j][3] - 0.5*(new_q[i][j][1]*new_q[i][j][1] + new_q[i][j][2]*new_q[i][j][2])/new_q[i][j][0])*(gamma-1));
 }     
 
 float Solution::T(int i, int j) {
@@ -122,30 +121,6 @@ float Solution::l(int i, int j, float off_i, float off_j) {
 
 }
 
-float Solution::lambda(float i, float j) {
-    /* input: j and i in off-integer notation
-     body:
-         takes the velocity from the two wall ajacent cells
-         takes the normal from the wall's normal
-
-         calculates the average speed of sound between the two cells
-
-     returns:
-         lambda value
-
-         key difference between this code and the python - need to calculate lambda based on velocity at the wall (average between cells)
-    */
-    int cell_i_left = round(i-0.1);  // left and right are used conceptually (could be a/b 1/2, etc) Not literal
-    int cell_j_left = round(j-0.1);
-
-    int cell_i_right = round (i+0.1);
-    int cell_j_right = round(j+0.1);
-
-    //float a {sqrt(gamma*R*T())}
-
-    // returns the eigenvalue at the cell
-    return 0.0;
-}
 
 // cizmas style
 float Solution::cizmas_lambda(int i, int j, float off_i, float off_j) {
@@ -190,9 +165,74 @@ float Solution::cizmas_lambda(int i, int j, float off_i, float off_j) {
     return static_cast<float>(fabs(cell_V[0]*normal[0] + cell_V[1]*normal[1]) + speed_o_sound_sonic);
 }
 
+float Solution::switch_2_xi(int i, int j, float off_i, float off_j) {
+    // original cell
+    float central_switch = nu_2 * fabs(p(i,j+1) - 2*p(i,j) + p(i,j-1)) / 
+           (p(i,j+1) + 2*p(i,j) + p(i,j-1));
+    
+    // bordering cell
+    int border_i = round(i+2*off_i);
+    int border_j = round(j+2*off_j);
+    float border_switch = nu_2 * fabs(p(border_i,border_j+1) - 2*p(border_i,border_j) + p(border_i,border_j-1)) / 
+           (p(border_i,border_j+1) + 2*p(border_i,border_j) + p(border_i,border_j-1));
+    
+    return 0.5*(central_switch + border_switch);
+}
+float Solution::switch_2_eta(int i, int j, float off_i, float off_j) {
+    // original cell
+    float central_switch =  nu_2 * fabs(p(i+1, j) - 2*p(i, j) + p(i-1, j)) / 
+            (p(i,j+1) + 2*p(i,j) + p(i,j-1));
+
+    // bordering cell
+    int border_i = round(i+2*off_i);
+    int border_j = round(j+2*off_j); 
+    float border_switch =  nu_2 * fabs(p(border_i+1, border_j) - 2*p(border_i, border_j) + p(border_i-1, border_j)) / 
+        (p(border_i,border_j+1) + 2*p(border_i,border_j) + p(border_i,border_j-1));
+    return 0.5*(central_switch + border_switch);
+}
+float Solution::switch_4_xi(int i, int j, float off_i, float off_j) {
+    return nu_4 - switch_2_xi(i, j, off_i, off_j);
+}
+float Solution::switch_4_eta(int i, int j, float off_i, float off_j) {
+    return nu_4 - switch_2_eta(i, j, off_i, off_j);
+}
+
 std::vector<float> Solution::D(int i, int j) {
-    float nu_2 {0.25};
-    float nu_4 {0.002};
+
+    // declare
+    std::vector<float> vec_1;
+    std::vector<float> vec_2;
+    std::vector<float> vec_3;
+    std::vector<float> vec_4;
+    std::vector<float> final_dissipation;
+
+    float coeff_1 = switch_2_xi(i,j,0.0f,1/2) * l(i,j,0.0f,1/2) * cizmas_lambda(i,j,0.0f,1/2);
+    float coeff_2 = switch_2_xi(i,j,0.0f,-1/2) * l(i,j,0.0f,-1/2) * cizmas_lambda(i,j,0.0f,-1/2);
+    for (int k = 0; k<4; k++) {
+        vec_1.push_back((new_q[i][j+1][k] - new_q[i][j][k])*coeff_1  -  (new_q[i][j][k] - new_q[i][j-1][k])*coeff_2);
+    }
+
+    float coeff_3 = switch_2_eta(i,j,1/2,0.0f) * l(i,j,1/2, 0.0f) * cizmas_lambda(i,j,1/2, 0.0f);
+    float coeff_4 = switch_2_eta(i,j,-1/2,0.0f) * l(i,j,-1/2, 0.0f) * cizmas_lambda(i,j,-1/2, 0.0f);
+    for (int k = 0; k<4; k++) {
+        vec_2.push_back((new_q[i+1][j][k] - new_q[i][j][k])*coeff_3  -  (new_q[i][j][k] - new_q[i-1][j][k])*coeff_4);
+    }
+
+    float coeff_5 = switch_4_xi(i,j,0.0f,1/2) * l(i,j,0.0f,1/2) * cizmas_lambda(i,j,0.0f,1/2);
+    float coeff_6 = switch_4_xi(i,j,0.0f,-1/2) * l(i,j,0.0f,-1/2) * cizmas_lambda(i,j,0.0f,-1/2);
+    for (int k = 0; k<4; k++) {
+        vec_3.push_back((new_q[i][j+2][k] - 3*new_q[i][j+1][k] + 4*new_q[i][j][k] - new_q[i-1][j][k])*coeff_5 - 
+        (new_q[i][j+1][k] - 3*new_q[i][j][k] + 4*new_q[i][j-1][k] - new_q[i][j-2][k])*coeff_6);
+    }
+
+    float coeff_7 = switch_4_eta(i,j,1/2,0.0f) * l(i,j,1/2,0.0f) * cizmas_lambda(i,j,1/2,0.0f);
+    float coeff_8 = switch_4_eta(i,j,-1/2,0.0f) * l(i,j,-1/2,0.0f) * cizmas_lambda(i,j,-1/2,0.0f);
+    for (int k = 0; k<4; k++) {
+        vec_4.push_back((new_q[i+2][j][k] - 3*new_q[i+1][j][k] + 4*new_q[i][j][k] - q[i-1][j][k])*coeff_7 - 
+        (new_q[i+1][j][k] - 3*new_q[i][j][k] + 4*new_q[i-1][j][k] - q[i-2][j][k])*coeff_8);
+    }
+
+
     /*input: 
         j and i cells
     body;
@@ -201,7 +241,12 @@ std::vector<float> Solution::D(int i, int j) {
     returns:
         total dissipations*/
     
-    return std::vector<float> {0.0f, 0.0f, 0.0f, 0.0f};
+    // sum all the terms
+    for (int k = 0; k<4; k++) {
+        final_dissipation.push_back(vec_1[k] + vec_2[k] - vec_3[k] - vec_4[k]);
+    }
+    // return final_dissipation;
+    return final_dissipation;
 }
 
 void Solution::update_BCs() {
