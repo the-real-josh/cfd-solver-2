@@ -371,7 +371,7 @@ void Solution::update_BCs() {
                 new_q[i][j][k] = static_cast<float>(2*new_q[i][j_max-4][k] - new_q[i][j_max-3][k]); 
                 // change the j_max-4 for j-2 and j_max-3 for j-1 if you want to make it constant gradient instead of zero gradient
             }
-            exit_v_mag_squared = pow(new_q[i][j_max-4][1], 2) + pow(new_q[i][j_max-4][2], 2) / pow(new_q[i][j_max-4][0], 2);
+            exit_v_mag_squared = (pow(new_q[i][j_max-4][1], 2) + pow(new_q[i][j_max-4][2], 2)) / pow(new_q[i][j_max-4][0], 2);
             new_q[i][j][3] = static_cast<float>(p_infty/(gamma-1) + new_q[i][j_max-4][0]*(0.5*exit_v_mag_squared)); // calculate rho*E
         }
     }
@@ -435,6 +435,7 @@ void Solution::iterate() {
         }   
     }
 
+    std::cout << "Iteration " << iteration_count << "\n";
     for (int i = 2; i<i_max-2; i++) { // start and end at 2, <i_max-2 because we do not generate a residual for ghost cells (BCs take care of that)
         for (int j = 2; j<j_max-2; j++) {
                         
@@ -478,7 +479,6 @@ void Solution::iterate() {
                          sqrt(pow(dx_s, 2)+pow(dy_s, 2)) * cizmas_lambda(i, j, -0.5f, 0.0f);
 
             // update the new q
-            std::cout << "Iteration " << iteration_count << "\n";
             for (int k = 0; k<4; k++) {
                 new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * (res[k] - curr_dissipation[k])); // residual and dissipation
             }
