@@ -198,6 +198,7 @@ float Solution::switch_4_eta(int i, int j, float off_i, float off_j) {
 }
 
 std::vector<float> Solution::D(int i, int j) {
+    /*Apply Jameson second and fourth order dissipation terms to damp out the euler-instability wiggles and aid convergence on a solution.*/
 
     // declare
     std::vector<float> vec_1;
@@ -218,17 +219,18 @@ std::vector<float> Solution::D(int i, int j) {
     float coeff_7 = switch_4_eta(i,j,1/2,0.0f) * l(i,j,1/2,0.0f) * cizmas_lambda(i,j,1/2,0.0f);
     float coeff_8 = switch_4_eta(i,j,-1/2,0.0f) * l(i,j,-1/2,0.0f) * cizmas_lambda(i,j,-1/2,0.0f);
 
+    // multiply coefficients by finite differences
     for (int k = 0; k<4; k++) {
         // 2nd order
         vec_1.push_back((new_q[i][j+1][k] - new_q[i][j][k])*coeff_1  -  (new_q[i][j][k] - new_q[i][j-1][k])*coeff_2);
         vec_2.push_back((new_q[i+1][j][k] - new_q[i][j][k])*coeff_3  -  (new_q[i][j][k] - new_q[i-1][j][k])*coeff_4);
 
         // 4th order
-        vec_3.push_back((new_q[i][j+2][k] - 3*new_q[i][j+1][k] + 4*new_q[i][j][k] - new_q[i-1][j][k])*coeff_5 - 
-        (new_q[i][j+1][k] - 3*new_q[i][j][k] + 4*new_q[i][j-1][k] - new_q[i][j-2][k])*coeff_6);
+        vec_3.push_back((new_q[i][j+2][k] - 3*new_q[i][j+1][k] + 3*new_q[i][j][k] - new_q[i-1][j][k])*coeff_5 - 
+        (new_q[i][j+1][k] - 3*new_q[i][j][k] + 3*new_q[i][j-1][k] - new_q[i][j-2][k])*coeff_6);
 
-        vec_4.push_back((new_q[i+2][j][k] - 3*new_q[i+1][j][k] + 4*new_q[i][j][k] - q[i-1][j][k])*coeff_7 - 
-        (new_q[i+1][j][k] - 3*new_q[i][j][k] + 4*new_q[i-1][j][k] - q[i-2][j][k])*coeff_8);
+        vec_4.push_back((new_q[i+2][j][k] - 3*new_q[i+1][j][k] + 3*new_q[i][j][k] - q[i-1][j][k])*coeff_7 - 
+        (new_q[i+1][j][k] - 3*new_q[i][j][k] + 3*new_q[i-1][j][k] - q[i-2][j][k])*coeff_8);
     }
 
     
@@ -263,9 +265,9 @@ void Solution::update_BCs() {
 
     // inlet boundary condition 
     std::vector<float> q_inlet = {
-        static_cast<float>(rho_infty),                                                                // rho
-        static_cast<float>(rho_infty*u_infty),                           // rho*u
-        0.0f,                                                                                                   // rho*v
+        static_cast<float>(rho_infty),          // rho
+        static_cast<float>(rho_infty*u_infty),  // rho*u
+        0.0f,                                   // rho*v
         static_cast<float>(rho_infty*E_infty)   // rho*E
     };
 
@@ -359,7 +361,7 @@ void Solution::update_BCs() {
     for (int i=2; i<i_max-2; i++) {
         for (int j=j_max-2; j<=j_max-1; j++) {
             for (int k=0; k<=3; k++) {
-                new_q[i][j][k] = static_cast<float>(2*new_q[i][j_max-4][k] - new_q[i][j_max-3][k]); 
+                new_q[i][j][k] = static_cast<float>(2*new_q[i][j_max-3][k] - new_q[i][j_max-4][k]); 
                 // change the j_max-4 for j-2 and j_max-3 for j-1 if you want to make it constant gradient instead of zero gradient
             }
             exit_v_mag_squared = (pow(new_q[i][j_max-4][1], 2) + pow(new_q[i][j_max-4][2], 2)) / pow(new_q[i][j_max-4][0], 2);
@@ -454,8 +456,12 @@ void Solution::iterate() {
                                              +0.5*(f[i][j][k] + f[i+1][j][k])*dy_n  +  0.5*(g[i][j][k] + g[i+1][j][k])*(-dx_n)        // north
                                              +0.5*(f[i][j][k] + f[i][j-1][k])*dy_w  +  0.5*(g[i][j][k] + g[i][j-1][k])*(-dx_w)        // west
                                              +0.5*(f[i][j][k] + f[i-1][j][k])*dy_s  +  0.5*(g[i][j][k] + g[i-1][j][k])*(-dx_s)        // south
-                );
-
+                                            );
+                if (res[k] != res[k]) {
+                    save_data(new_q);
+                    std::cout << "Nan entry detected at " << i << ", " << j << ", " << k << "\n";
+                    exit(1);
+                } 
             }
 
             // calculate dissipation $\vec D$ every 4
