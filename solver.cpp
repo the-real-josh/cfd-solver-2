@@ -82,7 +82,6 @@ float Solution::e(int i, int j) {
     return 0.0;
 }
 
-
 // internal functions
 float Solution::l(int i, int j, float off_i, float off_j) {
     // returns the length of a cell wall given the wall's index in off-integer notation
@@ -121,8 +120,6 @@ float Solution::l(int i, int j, float off_i, float off_j) {
 
 }
 
-
-// cizmas style
 float Solution::cizmas_lambda(int i, int j, float off_i, float off_j) {
     /* input: j and i in off-integer notation
      body:
@@ -164,7 +161,6 @@ float Solution::cizmas_lambda(int i, int j, float off_i, float off_j) {
     // returns the eigenvalue at the cell
     return static_cast<float>(fabs(cell_V[0]*normal[0] + cell_V[1]*normal[1]) + speed_o_sound_sonic);
 }
-
 float Solution::switch_2_xi(int i, int j, float off_i, float off_j) {
     // original cell
     float central_switch = nu_2 * fabs(p(i,j+1) - 2*p(i,j) + p(i,j-1)) / 
@@ -191,10 +187,21 @@ float Solution::switch_2_eta(int i, int j, float off_i, float off_j) {
     return 0.5*(central_switch + border_switch);
 }
 float Solution::switch_4_xi(int i, int j, float off_i, float off_j) {
-    return nu_4 - switch_2_xi(i, j, off_i, off_j);
+    // max(0.0f, nu_4 - switch_2_xi(i, j, off_i, off_j));
+    float sw = 0.0f-switch_2_xi(i, j, off_i, off_j);
+    if (sw<0.0f) {
+        return 0.0f;
+    } else {
+        return sw;
+    }
 }
 float Solution::switch_4_eta(int i, int j, float off_i, float off_j) {
-    return nu_4 - switch_2_eta(i, j, off_i, off_j);
+    float sw = nu_4 - switch_2_eta(i, j, off_i, off_j);
+        if (sw<0.0f) {
+        return 0.0f;
+    } else {
+        return sw;
+    }
 }
 
 std::vector<float> Solution::D(int i, int j) {
@@ -370,8 +377,6 @@ void Solution::update_BCs() {
     }
 }
 
-
-
 void Solution::update_f_g(int i, int j) {
     // changed from being based on q to being based on new_q
     // confirmed correct (check 'proofs for fluxes.py')
@@ -388,12 +393,10 @@ void Solution::update_f_g(int i, int j) {
     g[i][j][1] = static_cast<float>(new_q[i][j][1]*new_q[i][j][2]/new_q[i][j][0]);
     g[i][j][2] = static_cast<float>(new_q[i][j][2]*new_q[i][j][2]/new_q[i][j][0] + p); 
     g[i][j][3] = static_cast<float>(new_q[i][j][3]*new_q[i][j][2]/new_q[i][j][0] + p*(new_q[i][j][2]/new_q[i][j][0])); // for clarity in the confusion, f[i][j-1][0] was last seen as 122.5620*0.0775929+101324*0.0158403 ??????
-    // static cast???
-
-    
 }
 
 arrayD3 Solution::get_q() {
+    // read-only access of current state for external functions
     return new_q;
 }
 

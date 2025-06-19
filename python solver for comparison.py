@@ -411,14 +411,14 @@ def run(x_list, y_list, mach):
     # cizmas notes say 0-0.5
     # Jameson says 0.25
     # ChatGPT says 0.25
-    nu_2 = 0.0
+    nu_2 = 0.25
 
     # 4TH ORDER DISSIPATION COEFFICIENT
     #nu4 - cizmas says 0.001 or 0.01, Jameson says 1/256, which is 2**-8
     # nu_4 = 0.00390625 # or 0.01 or 0.001
     # TAs say 0.01 and ChatGPT 4o says 0.02.
     # 0.02 works for Mach 0.3 at 11x51 grid size
-    nu_4 = 0.00
+    nu_4 = 0.00390625
 
     # limiting values (so that one evil cell doesn't come and kill me)
     rho_ceil = 3 # kg/m3 (reasonable)
