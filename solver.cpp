@@ -92,28 +92,31 @@ float Solution::l(int i, int j, float off_i, float off_j) {
         exit(1);
     }
 
+    float small {0.001};
+
     // I know it's terrible, but it's easy to diagnose for now.
-    if (off_j > 0.1) {
+    if (fabs(off_j-0.5) < small) { // 
         return sqrt(
         pow(mesh_data[i][j+1][0] - mesh_data[i+1][j+1][0], 2) + 
         pow(mesh_data[i][j+1][1] - mesh_data[i+1][j+1][1], 2));
     }
-    else if (off_i > 0.1) {
+    else if (fabs(off_i-0.5) < small) {
         return sqrt(
         pow(mesh_data[i+1][j][0] - mesh_data[i+1][j+1][0], 2) + 
         pow(mesh_data[i+1][j][1] - mesh_data[i+1][j+1][1], 2));
     }
-    else if (off_j < 0.1) {
+    // BUG: zero is less than 0.1, so i=-0.5 will lead to errors   
+    else if (fabs(off_j+0.5) < small) {
         return sqrt(
         pow(mesh_data[i][j][0] - mesh_data[i+1][j][0], 2) + 
         pow(mesh_data[i][j][1] - mesh_data[i+1][j][1], 2));
     }
-    else if (off_i < 0.1) {
+    else if (fabs(off_i+0.5) < small) {
         return sqrt(
         pow(mesh_data[i][j][0] - mesh_data[i][j+1][0], 2) + 
         pow(mesh_data[i][j][1] - mesh_data[i][j+1][1], 2));
     } else {
-        std::cout << "Need to select a wall in order to get its length (both i and j were zero)\n";
+        std::cout << "Need to select a wall in order to get its length (oi = " << off_i << " and oj = " << off_j << "), ie they were zero)\n";
         exit(1);
         return 0.0f;
     }
@@ -139,21 +142,26 @@ float Solution::cizmas_lambda(int i, int j, float off_i, float off_j) {
     float dy;
     float dx;
 
-    if (off_j > 0.1) {
+    float small {0.001};
+
+    if (fabs(off_j-0.5) < small) {
         dy = (mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1]);
         dx = (mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0]);
     }
-    else if (off_i > 0.1) {
+    else if (fabs(off_i-0.5) < small) {
         dy = (mesh_data[i+1][j][1]-mesh_data[i+1][j+1][1]);
         dx = (mesh_data[i+1][j][0]-mesh_data[i+1][j+1][0]);
     }
-    else if (off_j < -0.1) {
+    else if (fabs(off_j+0.5) < small) {
         dy = (mesh_data[i][j][1]-mesh_data[i+1][j][1]);
         dx = (mesh_data[i][j][0]-mesh_data[i+1][j][0]);
     }
-    else /* if (off_i < -0.1)*/ {
+    else if (fabs(off_i+0.5) < small) {
         dy = (mesh_data[i][j+1][1]-mesh_data[i][j][1]);
         dx = (mesh_data[i][j+1][0]-mesh_data[i][j][0]);
+    } else {
+        std::cout << "Please select a wall to get the eigenvalue at.";
+        exit(1);
     }
     std::vector<float> normal = {static_cast<float>(dy/sqrt(dy*dy + dx*dx)),
                                  static_cast<float>(-dx/sqrt(dy*dy + dx*dx))};
@@ -197,7 +205,7 @@ float Solution::switch_4_xi(int i, int j, float off_i, float off_j) {
 }
 float Solution::switch_4_eta(int i, int j, float off_i, float off_j) {
     float sw = nu_4 - switch_2_eta(i, j, off_i, off_j);
-        if (sw<0.0f) {
+    if (sw<0.0f) {
         return 0.0f;
     } else {
         return sw;
@@ -215,16 +223,16 @@ std::vector<float> Solution::D(int i, int j) {
     std::vector<float> final_dissipation;
 
     // 2nd order coefficients
-    float coeff_1 = switch_2_xi(i,j,0.0f,1/2) * l(i,j,0.0f,1/2) * cizmas_lambda(i,j,0.0f,1/2);
-    float coeff_2 = switch_2_xi(i,j,0.0f,-1/2) * l(i,j,0.0f,-1/2) * cizmas_lambda(i,j,0.0f,-1/2);
-    float coeff_3 = switch_2_eta(i,j,1/2,0.0f) * l(i,j,1/2, 0.0f) * cizmas_lambda(i,j,1/2, 0.0f);
-    float coeff_4 = switch_2_eta(i,j,-1/2,0.0f) * l(i,j,-1/2, 0.0f) * cizmas_lambda(i,j,-1/2, 0.0f);
+    float coeff_1 = switch_2_xi(i,j,0.0f,0.5) * l(i,j,0.0f,0.5) * cizmas_lambda(i,j,0.0f,0.5);
+    float coeff_2 = switch_2_xi(i,j,0.0f,-0.5) * l(i,j,0.0f,-0.5) * cizmas_lambda(i,j,0.0f,-0.5);
+    float coeff_3 = switch_2_eta(i,j,0.5,0.0f) * l(i,j,0.5, 0.0f) * cizmas_lambda(i,j,0.5, 0.0f);
+    float coeff_4 = switch_2_eta(i,j,-0.5,0.0f) * l(i,j,-0.5, 0.0f) * cizmas_lambda(i,j,-0.5, 0.0f);
 
     // 4th order coefficients
-    float coeff_5 = switch_4_xi(i,j,0.0f,1/2) * l(i,j,0.0f,1/2) * cizmas_lambda(i,j,0.0f,1/2);
-    float coeff_6 = switch_4_xi(i,j,0.0f,-1/2) * l(i,j,0.0f,-1/2) * cizmas_lambda(i,j,0.0f,-1/2);
-    float coeff_7 = switch_4_eta(i,j,1/2,0.0f) * l(i,j,1/2,0.0f) * cizmas_lambda(i,j,1/2,0.0f);
-    float coeff_8 = switch_4_eta(i,j,-1/2,0.0f) * l(i,j,-1/2,0.0f) * cizmas_lambda(i,j,-1/2,0.0f);
+    float coeff_5 = switch_4_xi(i,j,0.0f,0.5) * l(i,j,0.0f,0.5) * cizmas_lambda(i,j,0.0f,0.5);
+    float coeff_6 = switch_4_xi(i,j,0.0f,-0.5) * l(i,j,0.0f,-0.5) * cizmas_lambda(i,j,0.0f,-0.5);
+    float coeff_7 = switch_4_eta(i,j,0.5,0.0f) * l(i,j,0.5,0.0f) * cizmas_lambda(i,j,0.5,0.0f);
+    float coeff_8 = switch_4_eta(i,j,-0.5,0.0f) * l(i,j,-0.5,0.0f) * cizmas_lambda(i,j,-0.5,0.0f);
 
     // multiply coefficients by finite differences
     for (int k = 0; k<4; k++) {
@@ -245,6 +253,16 @@ std::vector<float> Solution::D(int i, int j) {
     for (int k = 0; k<4; k++) {
         final_dissipation.push_back(vec_1[k] + vec_2[k] - vec_3[k] - vec_4[k]);
     }
+
+    // big LE cell
+    // if (i==2 && j==22) {
+    //     std::cout<< "x momentum dissipations at i=22,j=2: " << vec_1[1] << " + " << vec_2[1] << " - " << vec_3[1] << " - " << vec_4[1] << "\n";
+    //     std::cout << (new_q[i+2][j][1] - 3*new_q[i+1][j][1] + 3*new_q[i][j][1] - q[i -1][j][1]) << " * " << coeff_7 << " + " << (new_q[i+1][j][1] - 3*new_q[i][j][1] + 3*new_q[i-1][j][1] - q[i-2][j][1]) << " * " << coeff_8 << "\n";
+    //     std::cout << "Analyzing the reason for the similarities in coeffs: \n comparing switches: "
+    //      << switch_4_eta(i,j,0.5,0.0f) << " vs " << switch_4_eta(i,j,-0.5,0.0f) << "\n" <<
+    //      "Comparing lengths " <<  l(i,j,0.5,0.0f) << " vs " << l(i,j,-0.5,0.0f) << "\n" <<
+    //      "Comparing lambdas " << cizmas_lambda(i,j,0.5,0.0f) << " vs " << cizmas_lambda(i,j,-0.5,0.0f) << "\n";
+    // }
 
     return final_dissipation;
 }
@@ -480,8 +498,20 @@ void Solution::iterate() {
 
             // update the new q
             for (int k = 0; k<4; k++) {
+                // actual solver mechanics
                 new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * (res[k] - curr_dissipation[k])); // residual and dissipation
             }
+
+
+            // if (i == 2 && j == 22) {
+            //     std::cout << "Alpha * CFL * 2 / sum_l_lamb = " << alpha << " * " << CFL << " * 2 / " << sum_l_lamb << "\n";
+            //     for (int k = 0; k<4; k++) {
+            //         // debugging statement
+            //         std::cout << "new_q[" << i << "][" << j << "][" << k << "] = " << q[i][j][k] << " - " << (alpha * CFL * 2 / sum_l_lamb) << " * (" << res[k] << " - " << curr_dissipation[k] << ")\n"; 
+            //     }
+            //     system("pause");
+            // }
+
             update_f_g(i,j); // update f and g for the current cell
         }
     }

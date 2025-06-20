@@ -441,6 +441,16 @@ def run(x_list, y_list, mach):
 
     print(np.shape(cell_data))
 
+
+    del_y_east = lambda j,i: (y_list[j+1,i+1] - y_list[j,i+1]);       del_x_east = lambda j,i: (x_list[j+1,i+1] - x_list[j,i+1])   # delta x,y in east
+    del_y_north = lambda j,i: y_list[j+1,i] - y_list[j+1,i+1];      del_x_north = lambda j,i: (x_list[j+1,i] - x_list[j+1,i+1]) # delta x,y in north
+    del_y_west = lambda j,i: (y_list[j,i] - y_list[j+1,i]);           del_x_west = lambda j,i: (x_list[j,i] - x_list[j+1,i]  )         # delta x,y in west
+    del_y_south = lambda j,i: y_list[j,i+1] - y_list[j,i];          del_x_south = lambda j,i: (x_list[j,i+1] - x_list[j,i])         # delta x,y in south
+    cell_wall_distances = np.array([[[[del_y_east(j,i), del_y_north(j,i), del_y_west(j,i), del_y_south(j,i)],
+                                   [del_x_east(j,i), del_x_north(j,i), del_x_west(j,i), del_x_south(j,i)]] 
+                                   for i in range(len(x_list[0])-1)] for j in range(len(x_list)-1)])
+    lengths = np.sqrt(np.power(cell_wall_distances[:, :, 0, :], 2) + np.power(cell_wall_distances[:, :, 1, :], 2))
+
     dissipation_data = np.zeros((len(x_list)-1, len(x_list[0])-1), dtype=float)
     print(f'cell data initialized with shape {np.shape(cell_data)}')
     # each index has one subtracted because for n nodes there are n-1 cells
@@ -654,6 +664,49 @@ def run(x_list, y_list, mach):
             return np.max([0.0, (nu_4)-switch2_eta(j+1/2,i)])
 
 
+        def switch2_eta_new(jc,i, j):
+            adder = 1 if jc>j else -1
+
+            j = ind(j); i = ind(i)
+
+            num =  nu_2 * abs(diff2_xi(get_p, j+adder, i))
+            den =     get_p(ind(j+adder), ind(i+1)) + 2*get_p(ind(j+adder), ind(i)) + get_p(ind(j+adder), ind(i-1))
+            res1 = num/den
+
+            num = nu_2 * abs(diff2_xi(get_p, j, i))
+            den =     get_p(ind(j), ind(i+1)) + 2*get_p(ind(j), ind(i)) + get_p(ind(j), ind(i-1))
+            res2 = num/den
+
+            return nu_2*0.5*(res1+res2)
+
+
+        def switch2_xi_new(j,ic, i):
+            # j is on integer, and ic is off-integer. i is the home cell.
+            # returns the difference centered about the home cell averaged with either the right or the left depending on if it was +1/2 or -1/2
+            
+            # the switch at the face is the average of the switch at the cells - cizmas
+            adder = 1 if ic>i else -1
+            j = ind(j); i = ind(i)
+    
+
+            num = nu_2 * abs(diff2_xi(get_p, j,i+adder))
+            den = get_p(ind(j), ind(i+adder+1)) + 2*get_p(ind(j), ind(i+adder)) + get_p(ind(j), ind(i+adder-1))
+            res1 = num/den
+
+            num = nu_2 * abs(diff2_xi(get_p, j,i))
+            den =  get_p(ind(j), ind(i+1)) + 2*get_p(ind(j), ind(i)) + get_p(ind(j), ind(i-1))
+            res2 = num/den
+
+            return nu_2*0.5*(res1+res2)
+
+
+        def switch4_xi_new(jc,ic, i):
+            #jc is on integer
+            return np.max([0.0, (nu_4)-switch2_xi_new(jc, ic, i)])
+        
+        def switch4_eta_new(jc,ic, j):
+            return np.max([0.0, (nu_4)-switch2_eta_new(jc, ic, j)])
+
         # ========================= NOTES =========================
         # NOTE: when iterating over cells instead of nodes:
         #   the bottom and left nodes are going to be i,j
@@ -849,7 +902,28 @@ def run(x_list, y_list, mach):
                         return s4 * l(jc,ic) * lamb(jc, ic, og=(j-jc)) * diff3_eta(q, jc, ic)
 
                 try:
-                    D[:] = diff_xi(t1, j,i) + diff_eta(t2, j,i) - diff_xi(t3, j, i) - diff_eta(t4, j, i)
+                    term1 = switch2_xi_new(j,i+1/2,i+1) * lamb(j,i+1/2,og=-1/2) * lengths[j,i,0] * (cell_data[j,i+1] - cell_data[j,i]) - \
+                            switch2_xi_new(j,i-1/2,i-1) * lamb(j,i-1/2,og=+1/2) * lengths[j,i,2] * (cell_data[j,i] - cell_data[j,i-1])
+                    term1_old = diff_xi(t1, j,i)
+
+                    term2 = switch2_eta_new(j+1/2,i,j+1) * lamb(j+1/2,i,og=-1/2) * lengths[j,i,1] * (cell_data[j+1,i] - cell_data[j,i]) - \
+                            switch2_eta_new(j-1/2,i,j-1) * lamb(j-1/2,i,og=+1/2) * lengths[j,i,3] * (cell_data[j,i] - cell_data[j-1, i])
+                    term2_old = diff_eta(t2, j,i)
+
+                    term3 = switch4_xi_new(j,i+1/2,i+1) * lamb(j,i+1/2,og=-1/2) * lengths[j,i,0] * (cell_data[j,i+2] - 3*cell_data[j,i+1] + 3*cell_data[j,i] - cell_data[j,i-1]) - \
+                            switch4_xi_new(j,i-1/2,i-1) * lamb(j,i-1/2,og=+1/2) * lengths[j,i,2] * (cell_data[j,i+1] - 3*cell_data[j,i] + 3*cell_data[j,i-1] - cell_data[j,i-2])
+                    term3_old = diff_xi(t3, j, i)
+
+                    term4 = switch4_eta_new(j+1/2,i,j+1) * lamb(j+1/2,i,og=-1/2) * lengths[j,i,1] * (cell_data[j+2,i] - 3*cell_data[j+1, i] + 3*cell_data[j,i] - cell_data[j-1,i]) - \
+                            switch4_eta_new(j-1/2,i,j-1) * lamb(j-1/2,i,og=+1/2) * lengths[j,i,3] * (cell_data[j+1,i] - 3*cell_data[j,i] + 3*cell_data[j-1,i] - cell_data[j-2,i])
+                    term4_old = diff_eta(t4, j, i)
+
+                    if i==22 and j==2: #big LE cell:
+                        print(f'x momentum dissipations at i=22,j=2: {term1[1]} + {term2[1]} - {term3[1]} - {term4[1]}')
+                        print(f'{switch4_eta_new(j+1/2,i,j+1) * lamb(j+1/2,i,og=-1/2) * lengths[j,i,1]} * {(cell_data[j+2,i] - 3*cell_data[j+1, i] + 3*cell_data[j,i] - cell_data[j-1,i])[1]} + {switch4_eta_new(j-1/2,i,j-1) * lamb(j-1/2,i,og=+1/2) * lengths[j,i,3]} * {(cell_data[j+1,i] - 3*cell_data[j,i] + 3*cell_data[j-1,i] - cell_data[j-2,i])[1]}')
+                        print(f'Left side: ({cell_data[j+2,i,1]} - {3*cell_data[j+1, i,1]} + {3*cell_data[j,i,1]} - {cell_data[j-1,i,1]})\nRight side: {cell_data[j+1,i,1]} - {3*cell_data[j,i,1]} + {3*cell_data[j-1,i,1]} - {cell_data[j-2,i,1]})')
+
+                    D[:] = term1 + term2 - term3 - term4
                     dissipation_data[j,i] = D[3] 
                 except IndexError:
                     print(f'found an index error at j,i={j,i}')
@@ -863,12 +937,12 @@ def run(x_list, y_list, mach):
                 assert not np.isnan(np.dot(res, res)), "residual cannot be nan"
                 assert A>0.0
 
-                if i == 23 and j == 2: # big TE cell
+                if i == 22 and j == 2: # big LE cell
                     print(f'alphas[it_number]*2*CFL / sum_l_lamb): {alphas[it_number]}*2*{CFL} / {sum_l_lamb})')
                     # something's up
                     print(f'cell lambdas: {[(name, lamb(jt,it, og=((j-jt)+(i-it)))) for name, jt,it in zip(['north ', 'east ', 'south', 'west '], [j+1/2, j, j-1/2, j], [i, i+1/2, i, i-1/2])]}')
                     for m in range(4):
-                        print(f'new_q[{m}] = {cell_data[j,i,m]} - {(alphas[it_number]*2*CFL / sum_l_lamb)}*{res[m]} - {D[m]}')
+                        print(f'new_q[{m}] = {cell_data[j,i,m]} - ({(alphas[it_number]*2*CFL / sum_l_lamb)})*({res[m]} - {D[m]})')
 
                 # calculate new state
                 # new_q[:] = cell_data[j,i,:] - (alphas[it_number%4]*delta_t / A) * (res - D) # RK iteration with CFL

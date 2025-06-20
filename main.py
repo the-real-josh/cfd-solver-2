@@ -422,7 +422,7 @@ def main():
         mesh_fname = f'mesh_sh={c_dim[0]}x{c_dim[1]}.csv'
 
         # generate mesh
-        my_mesh = Mesh(c_dim)
+        my_mesh = Mesh(c_dim) 
         try:
             my_mesh.read(mesh_fname)
         except FileNotFoundError:
