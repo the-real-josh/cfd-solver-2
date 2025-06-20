@@ -22,7 +22,8 @@ using arrayD2 = std::vector<std::vector<float>>;
 // setup.cpp
 void get_config();
 arrayD3 get_mesh_data();
-void save_data(arrayD3);
+void save_data(arrayD3, std::string);
+void save_residuals(std::vector<float>);
 
 // can't declare variables here, or else it appears in all the files, leading to a conflict.
 // extern is supposed to fix this definition/declaration confusion?
@@ -45,6 +46,7 @@ class Solution {
         void innit(arrayD3 _mesh_data);            // take in mesh data and initialize the state
         void iterate();                                     // do 1 time-step
         arrayD3 get_q();                                    // return the results
+        std::vector<float> residuals;
 
     private:
         // private data
@@ -65,7 +67,8 @@ class Solution {
     
         // advanced numerical finders
         float l(int i, int j, float off_i, float off_j);                    // length of cell wall (input off-integer values)
-        float cizmas_lambda(int i, int j, float off_i, float off_j);
+        float pdf_lambda(int i, int j, float off_i, float off_j);
+        float lambda(int i, int j, float off_i, float off_j);
 
         float switch_2_xi(int i, int j, float off_i, float off_j);
         float switch_2_eta(int i, int j, float off_i, float off_j);

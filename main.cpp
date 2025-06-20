@@ -18,7 +18,7 @@ int main() {
     }
 
     // save results
-    save_data(sol.get_q());
-
+    save_data(sol.get_q(), res_fname);
+    save_residuals(sol.residuals);
     std::cout << "Process finished with exit code 0\n";
 }

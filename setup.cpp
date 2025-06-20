@@ -83,7 +83,7 @@ arrayD3 get_mesh_data() {
 }
 
 // bug: only outputs data in 13x24 instead of 14x25 as it should
-void save_data(arrayD3 q_out) {
+void save_data(arrayD3 q_out, std::string out_filename) {
     /* save the data
        saving format: 4 columns for each of the state variables */
 
@@ -108,7 +108,7 @@ void save_data(arrayD3 q_out) {
 
     
     // write to the output file
-    std::ofstream file(res_fname);
+    std::ofstream file(out_filename);
     auto writer = csv::make_csv_writer(file);
     writer << std::vector<std::string>({"rho", "rho_u", "rho_v", "rho_E"});
     for (int i = 0; i<flat_rho.size(); i++) {
@@ -120,5 +120,15 @@ void save_data(arrayD3 q_out) {
     }
 
     std::cout << "Data saver: data has been saved\n";
+}
+
+
+void save_residuals(std::vector<float> residuals) {
+    std::ofstream file ("residuals.csv");
+    auto writer = csv::make_csv_writer(file);
+    writer << std::vector<std::string>({"residuals"});
+    for (int i = 0; i<residuals.size(); i++) {
+        writer << std::vector<std::string>({std::to_string(residuals[i])});  
+    }
 }
 

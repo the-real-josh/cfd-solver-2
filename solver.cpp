@@ -116,7 +116,7 @@ float Solution::l(int i, int j, float off_i, float off_j) {
 
 }
 
-float Solution::cizmas_lambda(int i, int j, float off_i, float off_j) {
+float Solution::lambda(int i, int j, float off_i, float off_j) {
     float speed_o_sound_sonic {static_cast<float>(sqrt(gamma*R*T(i, j)))};
 
     std::vector<float> cell_V {static_cast<float>(new_q[i][j][1]/new_q[i][j][0]),
@@ -153,6 +153,18 @@ float Solution::cizmas_lambda(int i, int j, float off_i, float off_j) {
     // returns the eigenvalue at the cell
     return static_cast<float>(fabs(cell_V[0]*normal[0] + cell_V[1]*normal[1]) + speed_o_sound_sonic);
 }
+
+float Solution::pdf_lambda(int i, int j, float off_i, float off_j) {
+    float lambda1 = lambda(round(i+2*off_i),round(j+2*off_j),-off_i,-off_j);
+    float lambda2 = lambda(i,j,off_i,off_j);
+    if (lambda1 > lambda2) {
+        return lambda1;
+    } else {
+        return lambda2;
+    }
+}
+
+
 float Solution::switch_2_xi(int i, int j, float off_i, float off_j) {
     // original cell
     float central_switch = nu_2 * fabs(p(i,j+1) - 2*p(i,j) + p(i,j-1)) / 
@@ -207,16 +219,16 @@ std::vector<float> Solution::D(int i, int j) {
     std::vector<float> final_dissipation;
 
     // 2nd order coefficients
-    float coeff_1 = switch_2_xi(i,j,0.0f,0.5) * l(i,j,0.0f,0.5) * cizmas_lambda(i,j,0.0f,0.5);
-    float coeff_2 = switch_2_xi(i,j,0.0f,-0.5) * l(i,j,0.0f,-0.5) * cizmas_lambda(i,j,0.0f,-0.5);
-    float coeff_3 = switch_2_eta(i,j,0.5,0.0f) * l(i,j,0.5, 0.0f) * cizmas_lambda(i,j,0.5, 0.0f);
-    float coeff_4 = switch_2_eta(i,j,-0.5,0.0f) * l(i,j,-0.5, 0.0f) * cizmas_lambda(i,j,-0.5, 0.0f);
+    float coeff_1 = switch_2_xi(i,j,0.0f,0.5) * l(i,j,0.0f,0.5) * lambda(i,j,0.0f,0.5);
+    float coeff_2 = switch_2_xi(i,j,0.0f,-0.5) * l(i,j,0.0f,-0.5) * lambda(i,j,0.0f,-0.5);
+    float coeff_3 = switch_2_eta(i,j,0.5,0.0f) * l(i,j,0.5, 0.0f) * lambda(i,j,0.5, 0.0f);
+    float coeff_4 = switch_2_eta(i,j,-0.5,0.0f) * l(i,j,-0.5, 0.0f) * lambda(i,j,-0.5, 0.0f);
 
     // 4th order coefficients
-    float coeff_5 = switch_4_xi(i,j,0.0f,0.5) * l(i,j,0.0f,0.5) * cizmas_lambda(i,j,0.0f,0.5);
-    float coeff_6 = switch_4_xi(i,j,0.0f,-0.5) * l(i,j,0.0f,-0.5) * cizmas_lambda(i,j,0.0f,-0.5);
-    float coeff_7 = switch_4_eta(i,j,0.5,0.0f) * l(i,j,0.5,0.0f) * cizmas_lambda(i,j,0.5,0.0f);
-    float coeff_8 = switch_4_eta(i,j,-0.5,0.0f) * l(i,j,-0.5,0.0f) * cizmas_lambda(i,j,-0.5,0.0f);
+    float coeff_5 = switch_4_xi(i,j,0.0f,0.5) * l(i,j,0.0f,0.5) * lambda(i,j,0.0f,0.5);
+    float coeff_6 = switch_4_xi(i,j,0.0f,-0.5) * l(i,j,0.0f,-0.5) * lambda(i,j,0.0f,-0.5);
+    float coeff_7 = switch_4_eta(i,j,0.5,0.0f) * l(i,j,0.5,0.0f) * lambda(i,j,0.5,0.0f);
+    float coeff_8 = switch_4_eta(i,j,-0.5,0.0f) * l(i,j,-0.5,0.0f) * lambda(i,j,-0.5,0.0f);
 
     // multiply coefficients by finite differences
     for (int k = 0; k<4; k++) {
@@ -399,6 +411,8 @@ void Solution::iterate() {
     float alpha = alpha_values[iteration_count % 4];
     float sum_l_lamb = 0.0f; // $\Sum_0^4 l*\lambda$
 
+    float ag_res = 0.0f; // aggregate residual
+
     float dx_e;
     float dx_n;
     float dx_w;
@@ -446,7 +460,7 @@ void Solution::iterate() {
                                              +0.5*(f[i][j][k] + f[i-1][j][k])*dy_s  +  0.5*(g[i][j][k] + g[i-1][j][k])*(-dx_s)        // south
                                             );
                 if (res[k] != res[k]) {
-                    save_data(new_q);
+                    save_data(new_q, res_fname);
                     std::cout << "Nan entry detected at " << i << ", " << j << ", " << k << "\n";
                     exit(1);
                 } 
@@ -458,10 +472,10 @@ void Solution::iterate() {
             }
 
             // half index notation is stupid. Henceforth, we will have i,j,i_offset,j_offset
-            sum_l_lamb = sqrt(pow(dx_e, 2)+pow(dy_e, 2)) * cizmas_lambda(i, j, 0.0f, 0.5f) +
-                         sqrt(pow(dx_n, 2)+pow(dy_n, 2)) * cizmas_lambda(i, j, 0.5f, 0.0f) +
-                         sqrt(pow(dx_w, 2)+pow(dy_w, 2)) * cizmas_lambda(i, j, 0.0f, -0.5f) +
-                         sqrt(pow(dx_s, 2)+pow(dy_s, 2)) * cizmas_lambda(i, j, -0.5f, 0.0f);
+            sum_l_lamb = sqrt(pow(dx_e, 2)+pow(dy_e, 2)) * lambda(i, j, 0.0f, 0.5f) +
+                         sqrt(pow(dx_n, 2)+pow(dy_n, 2)) * lambda(i, j, 0.5f, 0.0f) +
+                         sqrt(pow(dx_w, 2)+pow(dy_w, 2)) * lambda(i, j, 0.0f, -0.5f) +
+                         sqrt(pow(dx_s, 2)+pow(dy_s, 2)) * lambda(i, j, -0.5f, 0.0f);
 
             // update the new q
             for (int k = 0; k<4; k++) {
@@ -477,7 +491,21 @@ void Solution::iterate() {
 
     // update q based on intermediate q
     if (iteration_count%4 == 3) {
-        q = new_q;              // update inner cells based on inner calculations
+
+        // residual calculation
+        for (int i = 0; i<i_max-2; i++) {
+            for (int j = 0; j<j_max-2; j++) {
+                for (int k = 0; k<=3; k++) {
+                    ag_res += fabs(q[i][j][k] - new_q[i][j][k]);
+                }
+            }
+        }
+        ag_res /= (i_max-2)*(j_max-2);
+        residuals.push_back(ag_res);
+
+        // update inner cells based on inner calculations
+        q = new_q;             
+
     }
 
     iteration_count++;      // update iteration counter

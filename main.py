@@ -10,6 +10,7 @@ class Mesh:
     def __init__(self, dimensions):
         """Input the dimensions of the physical mesh (number of core cells tall by number of core cells wide)"""
         self.core_dimensions = dimensions
+        self.bump_height = 0.12
     def generate(self):
         """Generates a mesh in un-ghostified form."""
         min_residual=1e-6
@@ -38,7 +39,7 @@ class Mesh:
             if 0 <= x <= 2:
                 return 0.0
             elif 2 < x <= 3:
-                return 0.12*np.sin((x-2)*3.14159)
+                return self.bump_height*np.sin((x-2)*3.14159)
             elif 3 < x <= 5:
                 return 0.0
             else:
@@ -49,7 +50,7 @@ class Mesh:
             if 0 <= x <= 2:
                 return 1.0
             elif 2 < x <= 3:
-                return 1.0-0.12*np.sin((x-2)*3.14159)
+                return 1.0-self.bump_height*np.sin((x-2)*3.14159)
             elif 3 < x <= 5:
                 return 1.0
             else:
@@ -415,6 +416,8 @@ def main():
     # generate mesh
     # i is no longer 
     core_dimensions = [(10,50)] # core mesh shapes
+
+    # core_dimensions = [(40,200)] # unstable after 2800 iterations at mach 0.3
     machs = [0.3]
     for c_dim in core_dimensions:
 
@@ -441,24 +444,35 @@ def main():
                 mach=mach,
                 results_fname=results_fname,
                 mesh_fname=mesh_fname,
-                max_iterations=1320) 
+                max_iterations=1200) 
         
             plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)
+            residuals = pd.read_csv('residuals.csv')['residuals'].to_numpy()
+            plt.plot(np.arange(0,len(residuals)), residuals); plt.title('residuals'); plt.show()
 
-def test_main():
-    """This test case shows some strange triangulation done by PyVista. I don't like PyVista, but it's what we have."""
-    df = pd.read_csv('test.csv')
-    x = df['x'].to_numpy().reshape((7,6)) # i_max = 7, j_max = 6
-    y = df['y'].to_numpy().reshape((7,6))
-
-    mesh_plot(x,y); plt.show()
-
-    # run(mesh_core_dimensions=(2,1), # core i_max = 1, core j_max = 2
-    #     mach=0.5,
-    #     results_fname='output.csv',
-    #     mesh_fname='test.csv')
+def test_tiny_square_mesh():
+    # stable to 100k iterations
+    c_dim = (5,25)
+    my_mesh = Mesh(c_dim)
+    my_mesh.bump_height = 0.0
+    mesh_fname = "5x25_square_mesh.csv"
+    try:
+        my_mesh.read(mesh_fname)
+    except FileNotFoundError:
+        my_mesh.generate()
+        my_mesh.ghostify() # saved mesh must be ghostified.
+        my_mesh.save(mesh_fname)
+        my_mesh.plot() 
     
-    plot_results_pv(mesh_core_dimensions=(2,1), mesh_fname='test.csv', results_fname='output.csv')
+    results_fname = f'5x25_square_results.csv'
+
+    run(mesh_core_dimensions=c_dim,
+        mach=0.3,
+        results_fname=results_fname,
+        mesh_fname=mesh_fname,
+        max_iterations=100000) 
+
+    plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)
 
 if __name__ == "__main__":
     main()
