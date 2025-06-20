@@ -3,7 +3,6 @@
 #include "csv.hpp"
 #include "solver.h"
 #include <cmath>
-// TODO: rename to solve_engine or something like that
 
 // data inputter
 void Solution::innit(arrayD3 _mesh_data) {
@@ -75,12 +74,6 @@ float Solution::rho(int i, int j) {
     return new_q[i][j][0];
 }
 
-float Solution::e(int i, int j) {
-    // unused, invalid
-    std::cout << "specific internal static energy getter reporting, invalid \n";
-    exit(1);
-    return 0.0;
-}
 
 // internal functions
 float Solution::l(int i, int j, float off_i, float off_j) {
@@ -124,17 +117,8 @@ float Solution::l(int i, int j, float off_i, float off_j) {
 }
 
 float Solution::cizmas_lambda(int i, int j, float off_i, float off_j) {
-    /* input: j and i in off-integer notation
-     body:
-         takes the velocity of the original cell between the two cells
-         takes l = the wall normal of the velocity
-     returns:
-         l
-
-         key difference between this code and the python - need to calculate lambda based on velocity at the wall (average between cells)
-    */
-
     float speed_o_sound_sonic {static_cast<float>(sqrt(gamma*R*T(i, j)))};
+
     std::vector<float> cell_V {static_cast<float>(new_q[i][j][1]/new_q[i][j][0]),
                                static_cast<float>(new_q[i][j][2]/new_q[i][j][0])};
 
@@ -248,21 +232,10 @@ std::vector<float> Solution::D(int i, int j) {
         (new_q[i+1][j][k] - 3*new_q[i][j][k] + 3*new_q[i-1][j][k] - q[i-2][j][k])*coeff_8);
     }
 
-    
     // sum all the terms
     for (int k = 0; k<4; k++) {
         final_dissipation.push_back(vec_1[k] + vec_2[k] - vec_3[k] - vec_4[k]);
     }
-
-    // big LE cell
-    // if (i==2 && j==22) {
-    //     std::cout<< "x momentum dissipations at i=22,j=2: " << vec_1[1] << " + " << vec_2[1] << " - " << vec_3[1] << " - " << vec_4[1] << "\n";
-    //     std::cout << (new_q[i+2][j][1] - 3*new_q[i+1][j][1] + 3*new_q[i][j][1] - q[i -1][j][1]) << " * " << coeff_7 << " + " << (new_q[i+1][j][1] - 3*new_q[i][j][1] + 3*new_q[i-1][j][1] - q[i-2][j][1]) << " * " << coeff_8 << "\n";
-    //     std::cout << "Analyzing the reason for the similarities in coeffs: \n comparing switches: "
-    //      << switch_4_eta(i,j,0.5,0.0f) << " vs " << switch_4_eta(i,j,-0.5,0.0f) << "\n" <<
-    //      "Comparing lengths " <<  l(i,j,0.5,0.0f) << " vs " << l(i,j,-0.5,0.0f) << "\n" <<
-    //      "Comparing lambdas " << cizmas_lambda(i,j,0.5,0.0f) << " vs " << cizmas_lambda(i,j,-0.5,0.0f) << "\n";
-    // }
 
     return final_dissipation;
 }
@@ -424,7 +397,6 @@ void Solution::iterate() {
     // get iteration alpha constant
     constexpr float alpha_values[] = {0.25f, 0.3333334f, 0.5f, 1.0f};
     float alpha = alpha_values[iteration_count % 4];
-    float delta_t = 0.0001f;
     float sum_l_lamb = 0.0f; // $\Sum_0^4 l*\lambda$
 
     float dx_e;
@@ -438,7 +410,6 @@ void Solution::iterate() {
     float dy_s;
 
     // allocations for calculation tools
-    float area; // unused as of now.
     std::vector<float> res(4, 0);
     std::vector<float> curr_dissipation(4, 0);
 
@@ -453,10 +424,6 @@ void Solution::iterate() {
     for (int i = 2; i<i_max-2; i++) { // start and end at 2, <i_max-2 because we do not generate a residual for ghost cells (BCs take care of that)
         for (int j = 2; j<j_max-2; j++) {
                         
-            // calcualte cell area
-            area = static_cast<float>(0.5*((mesh_data[i+1][j+1][0] - mesh_data[i][j][0])    *   (mesh_data[i+1][j][1] - mesh_data[i][j+1][1]) - 
-                                    (mesh_data[i+1][j+1][1] - mesh_data[i][j][1])          *   (mesh_data[i+1][j][0] - mesh_data[i][j+1][0])));
-
             // cell wall deltas (correct and in-line with py script)
             dy_e =  (mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1]);
             dx_e =  (mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0]);
@@ -502,16 +469,6 @@ void Solution::iterate() {
                 new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * (res[k] - curr_dissipation[k])); // residual and dissipation
             }
 
-
-            // if (i == 2 && j == 22) {
-            //     std::cout << "Alpha * CFL * 2 / sum_l_lamb = " << alpha << " * " << CFL << " * 2 / " << sum_l_lamb << "\n";
-            //     for (int k = 0; k<4; k++) {
-            //         // debugging statement
-            //         std::cout << "new_q[" << i << "][" << j << "][" << k << "] = " << q[i][j][k] << " - " << (alpha * CFL * 2 / sum_l_lamb) << " * (" << res[k] << " - " << curr_dissipation[k] << ")\n"; 
-            //     }
-            //     system("pause");
-            // }
-
             update_f_g(i,j); // update f and g for the current cell
         }
     }
@@ -522,8 +479,6 @@ void Solution::iterate() {
     if (iteration_count%4 == 3) {
         q = new_q;              // update inner cells based on inner calculations
     }
-
-    // key difference between this code and the python - is the main q updated every time
 
     iteration_count++;      // update iteration counter
 }

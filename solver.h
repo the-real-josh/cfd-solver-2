@@ -18,7 +18,6 @@ using arrayD2 = std::vector<std::vector<float>>;
 #define gamma 1.4
 #define cp (gamma*R/(gamma-1))
 #define cv (cp-R)
-// header - definitions go here for clarity
 
 // setup.cpp
 void get_config();
@@ -56,7 +55,6 @@ class Solution {
         arrayD3 g;
         
         // private functions (internal workings)
-
         void update_BCs();               // enforce boundary conditions
         void update_f_g(int i, int j);
 
@@ -64,10 +62,9 @@ class Solution {
         float p(int i, int j);                  // get pressure at a cell
         float T(int i, int j);                  // get temperature at a cell
         float rho(int i, int j);                // get density at a cell
-        float e(int i, int j);                  // get specific internal static energy at a cell
     
         // advanced numerical finders
-        float l(int i, int j, float off_i, float off_j);              // length of cell wall (input off-integer values)
+        float l(int i, int j, float off_i, float off_j);                    // length of cell wall (input off-integer values)
         float cizmas_lambda(int i, int j, float off_i, float off_j);
 
         float switch_2_xi(int i, int j, float off_i, float off_j);
