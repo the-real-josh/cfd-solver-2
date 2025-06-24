@@ -80,6 +80,7 @@ float Solution::rho(int i, int j) {
 // internal functions
 float Solution::l(int i, int j, float off_i, float off_j) {
     // returns the length of a cell wall given the wall's index in off-integer notation
+    // debugged with Ducky
 
     float small {0.001};
 
@@ -108,7 +109,6 @@ float Solution::l(int i, int j, float off_i, float off_j) {
         exit(1);
         return 0.0f;
     }
-
 }
 
 float Solution::lambda(int i, int j, float off_i, float off_j) {
@@ -123,25 +123,28 @@ float Solution::lambda(int i, int j, float off_i, float off_j) {
 
     float small {0.001};
 
-    if (fabs(off_j-0.5) < small) {
+    if (fabs(off_j-0.5) < small && fabs(off_i) < small) { // 
         dy = (mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1]);
         dx = (mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0]);
     }
-    else if (fabs(off_i-0.5) < small) {
+    else if (fabs(off_i-0.5) < small && fabs(off_j) < small) {
         dy = (mesh_data[i+1][j][1]-mesh_data[i+1][j+1][1]);
         dx = (mesh_data[i+1][j][0]-mesh_data[i+1][j+1][0]);
     }
-    else if (fabs(off_j+0.5) < small) {
+    else if (fabs(off_j+0.5) < small && fabs(off_i) < small) {
         dy = (mesh_data[i][j][1]-mesh_data[i+1][j][1]);
         dx = (mesh_data[i][j][0]-mesh_data[i+1][j][0]);
     }
-    else if (fabs(off_i+0.5) < small) {
+    else if (fabs(off_i+0.5) < small && fabs(off_j) < small) {
         dy = (mesh_data[i][j+1][1]-mesh_data[i][j][1]);
         dx = (mesh_data[i][j+1][0]-mesh_data[i][j][0]);
     } else {
         std::cout << "Please select a wall to get the eigenvalue at.";
         exit(1);
     }
+
+    // ducky has sign concerns.
+    // I say it's not that deep because the dot product has an absolute value right outside.
     std::vector<float> normal = {static_cast<float>(dy/sqrt(dy*dy + dx*dx)),
                                  static_cast<float>(-dx/sqrt(dy*dy + dx*dx))};
 
@@ -161,6 +164,12 @@ float Solution::pdf_lambda(int i, int j, float off_i, float off_j) {
 
 
 float Solution::switch_2_xi(int i, int j, float off_i, float off_j) {
+
+    if (fabs(off_i) > 0.01) {
+        std::cout << "Error in switch_2_xi";
+        exit(1);
+    }
+
     // original cell
     float central_switch = nu_2 * fabs(p(i,j+1) - 2*p(i,j) + p(i,j-1)) / 
            (p(i,j+1) + 2*p(i,j) + p(i,j-1));
@@ -174,6 +183,12 @@ float Solution::switch_2_xi(int i, int j, float off_i, float off_j) {
     return 0.5*(central_switch + border_switch);
 }
 float Solution::switch_2_eta(int i, int j, float off_i, float off_j) {
+
+    if (fabs(off_j) > 0.01) {
+        std::cout << "Error in switch_2_eta";
+        exit(1);
+    }
+
     // original cell
     float central_switch =  nu_2 * fabs(p(i+1, j) - 2*p(i, j) + p(i-1, j)) / 
             (p(i,j+1) + 2*p(i,j) + p(i,j-1));
@@ -185,9 +200,11 @@ float Solution::switch_2_eta(int i, int j, float off_i, float off_j) {
         (p(border_i,border_j+1) + 2*p(border_i,border_j) + p(border_i,border_j-1));
     return 0.5*(central_switch + border_switch);
 }
+
+
 float Solution::switch_4_xi(int i, int j, float off_i, float off_j) {
     // max(0.0f, nu_4 - switch_2_xi(i, j, off_i, off_j));
-    float sw = 0.0f-switch_2_xi(i, j, off_i, off_j);
+    float sw = nu_4 - switch_2_xi(i, j, off_i, off_j);
     if (sw<0.0f) {
         return 0.0f;
     } else {
