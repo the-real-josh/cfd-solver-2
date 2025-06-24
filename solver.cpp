@@ -56,12 +56,14 @@ void Solution::innit(arrayD3 _mesh_data) {
 }
 
 float Solution::p(int i, int j) {
+    // perfectly fine. Ducky agrees.
     // pressure used only for dissipation
     return static_cast<float>((new_q[i][j][3] - 0.5*(new_q[i][j][1]*new_q[i][j][1] + new_q[i][j][2]*new_q[i][j][2])/new_q[i][j][0])*(gamma-1));
 }     
 
 float Solution::T(int i, int j) {
     // get the energy for the current cell
+    // ducky approved
     float E {static_cast<float>(new_q[i][j][3]/new_q[i][j][0])};
     float V_squared {static_cast<float>(
         pow(new_q[i][j][1]/new_q[i][j][0], 2) + pow(new_q[i][j][2]/new_q[i][j][0], 2)
@@ -79,32 +81,25 @@ float Solution::rho(int i, int j) {
 float Solution::l(int i, int j, float off_i, float off_j) {
     // returns the length of a cell wall given the wall's index in off-integer notation
 
-    // safety check
-    if (off_i > 0.2 && off_j > 0.2) {
-        std::cout << "Cannot have both i and j be off-integer.\n";
-        exit(1);
-    }
-
     float small {0.001};
 
     // I know it's terrible, but it's easy to diagnose for now.
-    if (fabs(off_j-0.5) < small) { // 
+    if (fabs(off_j-0.5) < small && fabs(off_i) < small) { // 
         return sqrt(
         pow(mesh_data[i][j+1][0] - mesh_data[i+1][j+1][0], 2) + 
         pow(mesh_data[i][j+1][1] - mesh_data[i+1][j+1][1], 2));
     }
-    else if (fabs(off_i-0.5) < small) {
+    else if (fabs(off_i-0.5) < small && fabs(off_j) < small) {
         return sqrt(
         pow(mesh_data[i+1][j][0] - mesh_data[i+1][j+1][0], 2) + 
         pow(mesh_data[i+1][j][1] - mesh_data[i+1][j+1][1], 2));
     }
-    // BUG: zero is less than 0.1, so i=-0.5 will lead to errors   
-    else if (fabs(off_j+0.5) < small) {
+    else if (fabs(off_j+0.5) < small && fabs(off_i) < small) {
         return sqrt(
         pow(mesh_data[i][j][0] - mesh_data[i+1][j][0], 2) + 
         pow(mesh_data[i][j][1] - mesh_data[i+1][j][1], 2));
     }
-    else if (fabs(off_i+0.5) < small) {
+    else if (fabs(off_i+0.5) < small && fabs(off_j) < small) {
         return sqrt(
         pow(mesh_data[i][j][0] - mesh_data[i][j+1][0], 2) + 
         pow(mesh_data[i][j][1] - mesh_data[i][j+1][1], 2));

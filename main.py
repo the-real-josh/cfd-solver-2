@@ -444,7 +444,7 @@ def main():
                 mach=mach,
                 results_fname=results_fname,
                 mesh_fname=mesh_fname,
-                max_iterations=1200) 
+                max_iterations=1000) 
         
             plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)
             residuals = pd.read_csv('residuals.csv')['residuals'].to_numpy()
