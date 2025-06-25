@@ -56,6 +56,8 @@ class Solution {
         arrayD3 f;
         arrayD3 g;
         
+        std::vector<float> curr_dissipation;
+
         // private functions (internal workings)
         void update_BCs();               // enforce boundary conditions
         void update_f_g(int i, int j);

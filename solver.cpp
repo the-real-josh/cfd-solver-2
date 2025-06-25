@@ -53,6 +53,8 @@ void Solution::innit(arrayD3 _mesh_data) {
     new_q = q;
     update_BCs();
     q = new_q;
+
+    curr_dissipation = {0.0f, 0.0f, 0.0f, 0.0f};
 }
 
 float Solution::p(int i, int j) {
@@ -221,6 +223,7 @@ float Solution::switch_4_eta(int i, int j, float off_i, float off_j) {
 }
 
 std::vector<float> Solution::D(int i, int j) {
+    // ducky approved
     /*Apply Jameson second and fourth order dissipation terms to damp out the euler-instability wiggles and aid convergence on a solution.*/
 
     // declare
@@ -233,8 +236,8 @@ std::vector<float> Solution::D(int i, int j) {
     // 2nd order coefficients
     float coeff_1 = switch_2_xi(i,j,0.0f,0.5) * l(i,j,0.0f,0.5) * lambda(i,j,0.0f,0.5);
     float coeff_2 = switch_2_xi(i,j,0.0f,-0.5) * l(i,j,0.0f,-0.5) * lambda(i,j,0.0f,-0.5);
-    float coeff_3 = switch_2_eta(i,j,0.5,0.0f) * l(i,j,0.5, 0.0f) * lambda(i,j,0.5, 0.0f);
-    float coeff_4 = switch_2_eta(i,j,-0.5,0.0f) * l(i,j,-0.5, 0.0f) * lambda(i,j,-0.5, 0.0f);
+    float coeff_3 = switch_2_eta(i,j,0.5,0.0f) * l(i,j,0.5,0.0f) * lambda(i,j,0.5,0.0f);
+    float coeff_4 = switch_2_eta(i,j,-0.5,0.0f) * l(i,j,-0.5,0.0f) * lambda(i,j,-0.5,0.0f);
 
     // 4th order coefficients
     float coeff_5 = switch_4_xi(i,j,0.0f,0.5) * l(i,j,0.0f,0.5) * lambda(i,j,0.0f,0.5);
@@ -250,10 +253,10 @@ std::vector<float> Solution::D(int i, int j) {
 
         // 4th order
         vec_3.push_back((new_q[i][j+2][k] - 3*new_q[i][j+1][k] + 3*new_q[i][j][k] - new_q[i-1][j][k])*coeff_5 - 
-        (new_q[i][j+1][k] - 3*new_q[i][j][k] + 3*new_q[i][j-1][k] - new_q[i][j-2][k])*coeff_6);
+                        (new_q[i][j+1][k] - 3*new_q[i][j][k] + 3*new_q[i][j-1][k] - new_q[i][j-2][k])*coeff_6);
 
-        vec_4.push_back((new_q[i+2][j][k] - 3*new_q[i+1][j][k] + 3*new_q[i][j][k] - q[i-1][j][k])*coeff_7 - 
-        (new_q[i+1][j][k] - 3*new_q[i][j][k] + 3*new_q[i-1][j][k] - q[i-2][j][k])*coeff_8);
+        vec_4.push_back((new_q[i+2][j][k] - 3*new_q[i+1][j][k] + 3*new_q[i][j][k] - new_q[i-1][j][k])*coeff_7 - 
+                        (new_q[i+1][j][k] - 3*new_q[i][j][k] + 3*new_q[i-1][j][k] - new_q[i-2][j][k])*coeff_8);
     }
 
     // sum all the terms
@@ -436,8 +439,7 @@ void Solution::iterate() {
     float dy_s;
 
     // allocations for calculation tools
-    std::vector<float> res(4, 0);
-    std::vector<float> curr_dissipation(4, 0);
+    std::vector<float> res(4, 0.0f);
 
     // update all f and g
     for (int i = 0; i<i_max; i++) {
@@ -478,7 +480,7 @@ void Solution::iterate() {
                 } 
             }
 
-            // calculate dissipation $\vec D$ every 4
+            // RE-calculate dissipation $\vec D$ every 4. curr_dissipation is a class-wide variable, so it will persist between iterations.
             if (iteration_count%4 == 0) {
                 curr_dissipation = D(i, j);
             }
@@ -495,7 +497,8 @@ void Solution::iterate() {
                 new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * (res[k] - curr_dissipation[k])); // residual and dissipation
             }
 
-            update_f_g(i,j); // update f and g for the current cell
+            // safer without this guy
+            //update_f_g(i,j); // update f and g for the current cell
         }
     }
 
