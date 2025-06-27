@@ -224,46 +224,52 @@ std::vector<float> Solution::D(int i, int j) {
     // ducky approved
     /*Apply Jameson second and fourth order dissipation terms to damp out the euler-instability wiggles and aid convergence on a solution.*/
 
+//    std::vector<float> bdry_velocity(4, 0.0f);
+
+
     // declare
-    std::vector<float> vec_1;
-    std::vector<float> vec_2;
-    std::vector<float> vec_3;
-    std::vector<float> vec_4;
-    std::vector<float> final_dissipation;
+    std::vector<float> vec_1(4, 0.0f);
+    std::vector<float> vec_2(4, 0.0f);
+    std::vector<float> vec_3(4, 0.0f);
+    std::vector<float> vec_4(4, 0.0f);
+    std::vector<float> final_dissipation(4, 0.0f);
 
     // 2nd order coefficients
     float coeff_1 = switch_2_xi(i,j,   0.0f,  0.5f) * l(i,j,  0.0f,  0.5f) * lambda(i,j,  0.0f,  0.5f);
     float coeff_2 = switch_2_xi(i,j,   0.0f, -0.5f) * l(i,j,  0.0f, -0.5f) * lambda(i,j,  0.0f, -0.5f);
+
     float coeff_3 = switch_2_eta(i,j,  0.5f,  0.0f) * l(i,j,  0.5f,  0.0f) * lambda(i,j,  0.5f,  0.0f);
     float coeff_4 = switch_2_eta(i,j, -0.5f,  0.0f) * l(i,j, -0.5f,  0.0f) * lambda(i,j, -0.5f,  0.0f);
+
 
     // 4th order coefficients
     float coeff_5 = switch_4_xi(i,j,  0.0f,  0.5f) * l(i,j,  0.0f,  0.5f) * lambda(i,j,  0.0f,  0.5f);
     float coeff_6 = switch_4_xi(i,j,  0.0f, -0.5f) * l(i,j,  0.0f, -0.5f) * lambda(i,j,  0.0f, -0.5f);
+
     float coeff_7 = switch_4_eta(i,j, 0.5f,  0.0f) * l(i,j,  0.5f,  0.0f) * lambda(i,j,  0.5f,  0.0f);
     float coeff_8 = switch_4_eta(i,j,-0.5f,  0.0f) * l(i,j, -0.5f,  0.0f) * lambda(i,j, -0.5f,  0.0f);
 
     // multiply coefficients by finite differences
     for (int k = 0; k<4; k++) {
         // 2nd order
-        vec_1.push_back((new_q[i][j+1][k] - new_q[i][j+0][k])*coeff_1  -
-                        (new_q[i][j+0][k] - new_q[i][j-1][k])*coeff_2);
+        vec_1[k] = static_cast<float>((new_q[i][j+1][k] - new_q[i][j+0][k])*coeff_1  -
+                                      (new_q[i][j+0][k] - new_q[i][j-1][k])*coeff_2);
+ 
 
-
-        vec_2.push_back((new_q[i+1][j][k] - new_q[i+0][j][k])*coeff_3  -
-                        (new_q[i+0][j][k] - new_q[i-1][j][k])*coeff_4);
+        vec_2[k] = static_cast<float>((new_q[i+1][j][k] - new_q[i+0][j][k])*coeff_3  -
+                                      (new_q[i+0][j][k] - new_q[i-1][j][k])*coeff_4);
 
         // 4th order
-        vec_3.push_back((new_q[i][j+2][k] - 3*new_q[i][j+1][k] + 3*new_q[i][j+0][k] - new_q[i][j-1][k])*coeff_5 - 
-                        (new_q[i][j+1][k] - 3*new_q[i][j+0][k] + 3*new_q[i][j-1][k] - new_q[i][j-2][k])*coeff_6);
+        vec_3[k] = static_cast<float>((new_q[i][j+2][k] - 3*new_q[i][j+1][k] + 3*new_q[i][j+0][k] - new_q[i][j-1][k])*coeff_5 - 
+                                      (new_q[i][j+1][k] - 3*new_q[i][j+0][k] + 3*new_q[i][j-1][k] - new_q[i][j-2][k])*coeff_6);
 
-        vec_4.push_back((new_q[i+2][j][k] - 3*new_q[i+1][j][k] + 3*new_q[i+0][j][k] - new_q[i-1][j][k])*coeff_7 - 
-                        (new_q[i+1][j][k] - 3*new_q[i+0][j][k] + 3*new_q[i-1][j][k] - new_q[i-2][j][k])*coeff_8);
+        vec_4[k] = static_cast<float>((new_q[i+2][j][k] - 3*new_q[i+1][j][k] + 3*new_q[i+0][j][k] - new_q[i-1][j][k])*coeff_7 - 
+                                      (new_q[i+1][j][k] - 3*new_q[i+0][j][k] + 3*new_q[i-1][j][k] - new_q[i-2][j][k])*coeff_8);
     }
 
     // sum all the terms
     for (int k = 0; k<4; k++) {
-        final_dissipation.push_back(vec_1[k] + vec_2[k] - vec_3[k] - vec_4[k]);
+        final_dissipation[k] = (vec_1[k] + vec_2[k] - vec_3[k] - vec_4[k]);
     }
 
     return final_dissipation;

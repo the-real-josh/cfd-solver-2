@@ -24,12 +24,12 @@ relations = {
 f0 = rho*u
 f1 = rho*u**2 + p
 f2 = rho*u*v
-f3 = rho*E*u + p*u
+f3 = rho*E*u + p*u # rho*u*(E + p/rho)
 
 g0 = rho*v
 g1 = rho*u*v
 g2 = rho*v**2 + p
-g3 = rho*E*v + p*v
+g3 = rho*E*v + p*v # rho*v*(E + p/rho)
 
 
 boil = lambda a: sym.simplify(a.subs(relations).subs(relations).subs(relations)) 
