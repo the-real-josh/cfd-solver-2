@@ -415,10 +415,10 @@ def plot_results_pv(mesh_core_dimensions=None, mesh_fname=None, results_fname=No
 def main():
     # generate mesh
     # i is no longer 
-    core_dimensions = [(10,50)] # core mesh shapes
+    # core_dimensions = [(10,50)] # core mesh shapes
 
-    # core_dimensions = [(40,200)] # unstable after 2800 iterations at mach 0.3
-    machs = [0.30]
+    core_dimensions = [(40, 200)] # unstable after 2800 iterations at mach 0.3
+    machs = [0.70]
     for c_dim in core_dimensions:
 
         # mesh file name
@@ -434,45 +434,21 @@ def main():
             my_mesh.save(mesh_fname)
             my_mesh.plot() 
 
-        my_mesh.plot() # 
+        # my_mesh.plot() # 
 
         # run solver
         for mach in machs:
             results_fname = f'results_sh={c_dim[0]}x{c_dim[1]} M={mach}.csv'
  
-            run(mesh_core_dimensions=c_dim,
-                mach=mach,
-                results_fname=results_fname,
-                mesh_fname=mesh_fname,
-                max_iterations=1) 
+            # run(mesh_core_dimensions=c_dim,
+            #     mach=mach,
+            #     results_fname=results_fname,
+            #     mesh_fname=mesh_fname,
+            #     max_iterations=50000) 
         
             plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)
             residuals = pd.read_csv('residuals.csv')['residuals'].to_numpy()
-            plt.plot(np.arange(0,len(residuals)), residuals); plt.title('residuals'); plt.show()
-
-def test_tiny_square_mesh():
-    # stable to 100k iterations
-    c_dim = (5,25)
-    my_mesh = Mesh(c_dim)
-    my_mesh.bump_height = 0.0
-    mesh_fname = "5x25_square_mesh.csv"
-    try:
-        my_mesh.read(mesh_fname)
-    except FileNotFoundError:
-        my_mesh.generate()
-        my_mesh.ghostify() # saved mesh must be ghostified.
-        my_mesh.save(mesh_fname)
-        my_mesh.plot() 
-    
-    results_fname = f'5x25_square_results.csv'
-
-    run(mesh_core_dimensions=c_dim,
-        mach=0.3,
-        results_fname=results_fname,
-        mesh_fname=mesh_fname,
-        max_iterations=100000) 
-
-    plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)
+            plt.plot(np.arange(0,len(residuals)), residuals); plt.yscale('log'); plt.title('residuals'); plt.show()
 
 if __name__ == "__main__":
     main()

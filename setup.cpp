@@ -15,8 +15,8 @@ std::string res_fname;
 
 // setup
 void get_config() {
-    // get these guys based on a config file later
-    csv::CSVReader reader("solver_commands.csv"); // hard-coded to be the same as the python
+    // Extract values from a config file
+    csv::CSVReader reader("solver_commands.csv"); // hard-coded to be the same filename as the one python makes
     auto it = reader.begin();
     csv::CSVRow row = *it;
 

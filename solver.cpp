@@ -173,16 +173,6 @@ float Solution::lambda(int i, int j, float off_i, float off_j) {
     return static_cast<float>(fabs(cell_V[0]*normal[0] + cell_V[1]*normal[1]) + speed_o_sound_sonic);
 }
 
-float Solution::pdf_lambda(int i, int j, float off_i, float off_j) {
-    float lambda1 = lambda(round(i+2*off_i), round(j+2*off_j),-off_i,-off_j);
-    float lambda2 = lambda(i,j,off_i,off_j);
-    if (lambda1 > lambda2) {
-        return lambda1;
-    } else {
-        return lambda2;
-    }
-}
-
 
 float Solution::switch_2_xi(int i, int j, float off_i, float off_j) {
     if (fabs(off_i) > 0.01) {

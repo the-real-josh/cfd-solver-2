@@ -68,7 +68,6 @@ class Solution {
     
         // advanced numerical finders
         float l(int i, int j, float off_i, float off_j);                    // length of cell wall (input off-integer values)
-        float pdf_lambda(int i, int j, float off_i, float off_j);
         float lambda(int i, int j, float off_i, float off_j);
 
         float switch_2_xi(int i, int j, float off_i, float off_j);
