@@ -46,3 +46,6 @@ https://www.lowtoxlife.com/wp-content/uploads/2016/05/Screen-Shot-2016-05-05-at-
 
 
 # energy appears to be significantly increasing from inlet
+
+
+cell 22, south face

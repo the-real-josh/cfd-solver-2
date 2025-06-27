@@ -434,7 +434,7 @@ def main():
             my_mesh.save(mesh_fname)
             my_mesh.plot() 
 
-        # my_mesh.plot() # 
+        my_mesh.plot() # 
 
         # run solver
         for mach in machs:
@@ -444,7 +444,7 @@ def main():
                 mach=mach,
                 results_fname=results_fname,
                 mesh_fname=mesh_fname,
-                max_iterations=1000) 
+                max_iterations=1) 
         
             plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)
             residuals = pd.read_csv('residuals.csv')['residuals'].to_numpy()

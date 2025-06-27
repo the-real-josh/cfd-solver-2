@@ -29,10 +29,12 @@ void Solution::innit(arrayD3 _mesh_data) {
     q.resize(i_max);
     f.resize(i_max);
     g.resize(i_max);
+    D.resize(i_max);
     for (int i = 0; i<=i_max-1; i++) { 
         q[i].resize(j_max);
         f[i].resize(j_max);
         g[i].resize(j_max);
+        D[i].resize(j_max);
         for (int j = 0; j<=j_max-1; j++) {
                 q[i][j] = std::vector<float>{
                     static_cast<float>(rho_infty), // solve for density
@@ -42,6 +44,7 @@ void Solution::innit(arrayD3 _mesh_data) {
                 };
                 f[i][j] = std::vector<float> {0.0f, 0.0f, 0.0f, 0.0f};
                 g[i][j] = std::vector<float> {0.0f, 0.0f, 0.0f, 0.0f};
+                D[i][j] = std::vector<float> {0.0f, 0.0f, 0.0f, 0.0f};
         }
     }
 
@@ -53,18 +56,18 @@ void Solution::innit(arrayD3 _mesh_data) {
     new_q = q;
     update_BCs();
     q = new_q;
-
-    curr_dissipation = {0.0f, 0.0f, 0.0f, 0.0f};
 }
 
 float Solution::p(int i, int j) {
+    // calculate pressure at cell i,j
+
     // perfectly fine. Ducky agrees.
     // pressure used only for dissipation
     return static_cast<float>((new_q[i][j][3] - 0.5*(new_q[i][j][1]*new_q[i][j][1] + new_q[i][j][2]*new_q[i][j][2])/new_q[i][j][0])*(gamma-1));
 }     
 
 float Solution::T(int i, int j) {
-    // get the energy for the current cell
+    // get the temperature for the cell i,j
     // ducky approved
     float E {static_cast<float>(new_q[i][j][3]/new_q[i][j][0])};
     float V_squared {static_cast<float>(
@@ -72,11 +75,6 @@ float Solution::T(int i, int j) {
     )};
     return (E-0.5*V_squared)/cv;
 } 
-
-float Solution::rho(int i, int j) {
-    // currently unused
-    return new_q[i][j][0];
-}
 
 
 // internal functions
@@ -144,8 +142,30 @@ float Solution::lambda(int i, int j, float off_i, float off_j) {
         exit(1);
     }
 
+    // tests to ensure that the length function (and therefore the normal calculation of the lambda function are identical)
+    // tests were run to ensure that the lambda length and the dy and dx calculations agree
+
+    // test for length of the right side of the LE cell
+    // if (i==i_max-3 && j==22 && fabs(off_i)<0.01 && fabs(off_j-0.5)<0.001) {
+    //     float val {l(i,j,off_i,off_j)};
+    //     if (val-0.0887693640847 > 0.001) {
+    //         std::cout << "SUS SUS SUS " << val;
+    //         exit(1);
+    //     }
+    // }
+    // test for length of the bottom side of the LE cell
+    // if (i==i_max-3 && j==22 && fabs(off_i+0.5)<0.01 && fabs(off_j)<0.001) {
+    //     float val {l(i,j,off_i,off_j)};
+    //     if (val-0.164805946495 > 0.001) {
+    //         std::cout << "SUS SUS SUS " << val;
+    //         exit(1);
+    //     }
+    // }
+
     // ducky has sign concerns.
     // I say it's not that deep because the dot product has an absolute value right outside.
+    // think about it - you could invert the sign of the normal and then it would be the same as inverting the magnitude, 
+    // which should be nullified by the fabs()
     std::vector<float> normal = {static_cast<float>(dy/sqrt(dy*dy + dx*dx)),
                                  static_cast<float>(-dx/sqrt(dy*dy + dx*dx))};
 
@@ -154,7 +174,7 @@ float Solution::lambda(int i, int j, float off_i, float off_j) {
 }
 
 float Solution::pdf_lambda(int i, int j, float off_i, float off_j) {
-    float lambda1 = lambda(round(i+2*off_i),round(j+2*off_j),-off_i,-off_j);
+    float lambda1 = lambda(round(i+2*off_i), round(j+2*off_j),-off_i,-off_j);
     float lambda2 = lambda(i,j,off_i,off_j);
     if (lambda1 > lambda2) {
         return lambda1;
@@ -174,13 +194,14 @@ float Solution::switch_2_xi(int i, int j, float off_i, float off_j) {
     float central_switch = nu_2 * fabs(p(i,j+1) - 2*p(i,j) + p(i,j-1)) / 
            (p(i,j+1) + 2*p(i,j) + p(i,j-1));
     
-    // bordering cell
+    // bordering cell (confirmed to find a different cell every time)
     int border_i = round(i+2*off_i);
     int border_j = round(j+2*off_j);
+
     float border_switch = nu_2 * fabs(p(border_i,border_j+1) - 2*p(border_i,border_j) + p(border_i,border_j-1)) / 
            (p(border_i,border_j+1) + 2*p(border_i,border_j) + p(border_i,border_j-1));
-    
-    return 0.5*(central_switch + border_switch);
+
+    return 0.5f*(central_switch + border_switch); // resulting value is always positve
 }
 float Solution::switch_2_eta(int i, int j, float off_i, float off_j) {
 
@@ -193,19 +214,21 @@ float Solution::switch_2_eta(int i, int j, float off_i, float off_j) {
     float central_switch =  nu_2 * fabs(p(i+1, j) - 2*p(i, j) + p(i-1, j)) / 
             (p(i,j+1) + 2*p(i,j) + p(i,j-1));
 
-    // bordering cell
+    // bordering cell (confirmed to find a different cell every time)
     int border_i = round(i+2*off_i);
     int border_j = round(j+2*off_j); 
+
     float border_switch =  nu_2 * fabs(p(border_i+1, border_j) - 2*p(border_i, border_j) + p(border_i-1, border_j)) / 
         (p(border_i,border_j+1) + 2*p(border_i,border_j) + p(border_i,border_j-1));
-    return 0.5*(central_switch + border_switch);
+
+    return 0.5f*(central_switch + border_switch); // resulting value is always postive
 }
 
 
 float Solution::switch_4_xi(int i, int j, float off_i, float off_j) {
     // max(0.0f, nu_4 - switch_2_xi(i, j, off_i, off_j));
     float sw = nu_4 - switch_2_xi(i, j, off_i, off_j);
-    if (sw<0.0f) {
+    if (sw < 0.0f) {
         return 0.0f;
     } else {
         return sw;
@@ -213,19 +236,18 @@ float Solution::switch_4_xi(int i, int j, float off_i, float off_j) {
 }
 float Solution::switch_4_eta(int i, int j, float off_i, float off_j) {
     float sw = nu_4 - switch_2_eta(i, j, off_i, off_j);
-    if (sw<0.0f) {
+    if (sw < 0.0f) {
         return 0.0f;
     } else {
         return sw;
     }
 }
 
-std::vector<float> Solution::D(int i, int j) {
+std::vector<float> Solution::update_D(int i, int j) {
+    /* Gives the correct dissipation value at any given cell i,j
+        Applies Jameson second and fourth order dissipation terms to damp out the euler-instability wiggles and aid convergence on a solution.*/
+
     // ducky approved
-    /*Apply Jameson second and fourth order dissipation terms to damp out the euler-instability wiggles and aid convergence on a solution.*/
-
-//    std::vector<float> bdry_velocity(4, 0.0f);
-
 
     // declare
     std::vector<float> vec_1(4, 0.0f);
@@ -255,7 +277,6 @@ std::vector<float> Solution::D(int i, int j) {
         vec_1[k] = static_cast<float>((new_q[i][j+1][k] - new_q[i][j+0][k])*coeff_1  -
                                       (new_q[i][j+0][k] - new_q[i][j-1][k])*coeff_2);
  
-
         vec_2[k] = static_cast<float>((new_q[i+1][j][k] - new_q[i+0][j][k])*coeff_3  -
                                       (new_q[i+0][j][k] - new_q[i-1][j][k])*coeff_4);
 
@@ -338,7 +359,7 @@ void Solution::update_BCs() {
                 // changed the j_max-4 for j-2 and j_max-3 for j-1 if you want to make it constant gradient instead of constant
             }
             exit_v_mag_squared = (pow(new_q[i][j][1], 2) + pow(new_q[i][j][2], 2)) / pow(new_q[i][j][0], 2);
-            new_q[i][j][3] = static_cast<float>(p_infty/(gamma-1) + new_q[i][j][0]*(0.5*exit_v_mag_squared)); // calculate rho*E
+            new_q[i][j][3] = static_cast<float>(p_infty/(gamma-1) + new_q[i][j][0]*(0.5f*exit_v_mag_squared)); // calculate rho*E
         }
     }
 
@@ -486,9 +507,9 @@ void Solution::iterate() {
                 } 
             }
 
-            // RE-calculate dissipation $\vec D$ every 4. curr_dissipation is a class-wide variable, so it will persist between iterations.
+            // RE-calculate dissipation $\vec D$ every 4. curr_dissipation is a class-wide 3D array, so it will persist between iterations.
             if (iteration_count%4 == 0) {
-                curr_dissipation = D(i, j);
+                D[i][j] = update_D(i, j);
             }
 
             // half index notation is stupid. Henceforth, we will have i,j,i_offset,j_offset
@@ -500,7 +521,7 @@ void Solution::iterate() {
             // update the new q
             for (int k = 0; k<4; k++) {
                 // actual solver mechanics
-                new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * (res[k] - curr_dissipation[k])); // residual and dissipation
+                new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * (res[k] - D[i][j][k])); // residual and dissipation
             }
 
             // safer without this guy

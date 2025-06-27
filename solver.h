@@ -9,13 +9,13 @@
 using arrayD3 = std::vector<std::vector<std::vector<float>>>;
 using arrayD2 = std::vector<std::vector<float>>;
 
-#define CFL 1.0
-#define nu_2 0.25
-#define nu_4 0.00390625
+#define CFL 1.0f
+#define nu_2 0.25f
+#define nu_4 0.00390625f
 
-#define R 287.052
-#define pi 3.1415
-#define gamma 1.4
+#define R 287.052f
+#define pi 3.1415f
+#define gamma 1.4f
 #define cp (gamma*R/(gamma-1))
 #define cv (cp-R)
 
@@ -56,7 +56,7 @@ class Solution {
         arrayD3 f;
         arrayD3 g;
         
-        std::vector<float> curr_dissipation;
+        arrayD3 D;
 
         // private functions (internal workings)
         void update_BCs();               // enforce boundary conditions
@@ -65,7 +65,6 @@ class Solution {
         // simple state getters
         float p(int i, int j);                  // get pressure at a cell
         float T(int i, int j);                  // get temperature at a cell
-        float rho(int i, int j);                // get density at a cell
     
         // advanced numerical finders
         float l(int i, int j, float off_i, float off_j);                    // length of cell wall (input off-integer values)
@@ -77,7 +76,7 @@ class Solution {
         float switch_4_xi(int i, int j, float off_i, float off_j);
         float switch_4_eta(int i, int j, float off_i, float off_j);
 
-        std::vector<float> D(int i, int j);              // dissipation at the cell
+        std::vector<float> update_D(int i, int j);              // dissipation at the cell
     };
 
 #endif
