@@ -12,6 +12,7 @@ using arrayD2 = std::vector<std::vector<float>>;
 #define CFL 1.0f
 #define nu_2 0.25f
 #define nu_4 0.00390625f
+#define small 0.001
 
 #define R 287.052f
 #define pi 3.1415f
