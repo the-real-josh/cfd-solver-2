@@ -415,10 +415,10 @@ def plot_results_pv(mesh_core_dimensions=None, mesh_fname=None, results_fname=No
 def main():
     # generate mesh
     # i is no longer 
-    # core_dimensions = [(10,50)] # core mesh shapes
+    core_dimensions = [(10,50)] # core mesh shapes
 
-    core_dimensions = [(40, 200)] # unstable after 2800 iterations at mach 0.3
-    machs = [0.70]
+    # core_dimensions = [(40, 200)] # unstable after 2800 iterations at mach 0.3
+    machs = [0.50]
     for c_dim in core_dimensions:
 
         # mesh file name
@@ -429,7 +429,7 @@ def main():
         try:
             my_mesh.read(mesh_fname)
         except FileNotFoundError:
-            my_mesh.generate()
+            my_mesh.generate() # generate the mesh
             my_mesh.ghostify() # saved mesh must be ghostified.
             my_mesh.save(mesh_fname)
             my_mesh.plot() 
@@ -440,15 +440,16 @@ def main():
         for mach in machs:
             results_fname = f'results_sh={c_dim[0]}x{c_dim[1]} M={mach}.csv'
  
-            # run(mesh_core_dimensions=c_dim,
-            #     mach=mach,
-            #     results_fname=results_fname,
-            #     mesh_fname=mesh_fname,
-            #     max_iterations=50000) 
+            run(mesh_core_dimensions=c_dim,
+                mach=mach,
+                results_fname=results_fname,
+                mesh_fname=mesh_fname,
+                max_iterations=80000) 
         
             plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)
             residuals = pd.read_csv('residuals.csv')['residuals'].to_numpy()
-            plt.plot(np.arange(0,len(residuals)), residuals); plt.yscale('log'); plt.title('residuals'); plt.show()
+            plt.plot(np.arange(0,len(residuals)), residuals); plt.yscale('log'); plt.title('residuals');
+            plt.xlabel('Full iteration count'); plt.ylabel('Average cell residual magnitude'); plt.show()
 
 if __name__ == "__main__":
     main()

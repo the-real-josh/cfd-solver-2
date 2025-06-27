@@ -237,13 +237,7 @@ std::vector<float> Solution::update_D(int i, int j) {
     /* Gives the correct dissipation value at any given cell i,j
         Applies Jameson second and fourth order dissipation terms to damp out the euler-instability wiggles and aid convergence on a solution.*/
 
-    // ducky approved
-
     // declare
-    std::vector<float> vec_1(4, 0.0f);
-    std::vector<float> vec_2(4, 0.0f);
-    std::vector<float> vec_3(4, 0.0f);
-    std::vector<float> vec_4(4, 0.0f);
     std::vector<float> final_dissipation(4, 0.0f);
 
     // 2nd order coefficients
@@ -263,42 +257,33 @@ std::vector<float> Solution::update_D(int i, int j) {
 
     // multiply coefficients by finite differences
     for (int k = 0; k<4; k++) {
-        // 2nd order
-        vec_1[k] = static_cast<float>((new_q[i][j+1][k] - new_q[i][j+0][k])*coeff_1  -
-                                      (new_q[i][j+0][k] - new_q[i][j-1][k])*coeff_2);
+        final_dissipation[k] = static_cast<float>(
+                                    // 2nd order dissipation terms
+                                    (new_q[i][j+1][k] - new_q[i][j+0][k])*coeff_1  -
+                                    (new_q[i][j+0][k] - new_q[i][j-1][k])*coeff_2  +
  
-        vec_2[k] = static_cast<float>((new_q[i+1][j][k] - new_q[i+0][j][k])*coeff_3  -
-                                      (new_q[i+0][j][k] - new_q[i-1][j][k])*coeff_4);
+                                    (new_q[i+1][j][k] - new_q[i+0][j][k])*coeff_3  -
+                                    (new_q[i+0][j][k] - new_q[i-1][j][k])*coeff_4  +
 
-        // 4th order
-        vec_3[k] = static_cast<float>((new_q[i][j+2][k] - 3*new_q[i][j+1][k] + 3*new_q[i][j+0][k] - new_q[i][j-1][k])*coeff_5 - 
-                                      (new_q[i][j+1][k] - 3*new_q[i][j+0][k] + 3*new_q[i][j-1][k] - new_q[i][j-2][k])*coeff_6);
+                                    // 4th order dissipation terms
+                                    -(new_q[i][j+2][k] - 3*new_q[i][j+1][k] + 3*new_q[i][j+0][k] - new_q[i][j-1][k])*coeff_5 - 
+                                    -(new_q[i][j+1][k] - 3*new_q[i][j+0][k] + 3*new_q[i][j-1][k] - new_q[i][j-2][k])*coeff_6
 
-        vec_4[k] = static_cast<float>((new_q[i+2][j][k] - 3*new_q[i+1][j][k] + 3*new_q[i+0][j][k] - new_q[i-1][j][k])*coeff_7 - 
-                                      (new_q[i+1][j][k] - 3*new_q[i+0][j][k] + 3*new_q[i-1][j][k] - new_q[i-2][j][k])*coeff_8);
+                                    -(new_q[i+2][j][k] - 3*new_q[i+1][j][k] + 3*new_q[i+0][j][k] - new_q[i-1][j][k])*coeff_7 - 
+                                    -(new_q[i+1][j][k] - 3*new_q[i+0][j][k] + 3*new_q[i-1][j][k] - new_q[i-2][j][k])*coeff_8
+                                );
     }
-
-    // sum all the terms
-    for (int k = 0; k<4; k++) {
-        final_dissipation[k] = (vec_1[k] + vec_2[k] - vec_3[k] - vec_4[k]);
-    }
-
     return final_dissipation;
 }
 
 void Solution::update_BCs() {
-    /*input:
-        None
-    body: 
-        edits new_q such that boundary conditions are enforced
-    output: 
-        None*/
+    /* edits new_q such that boundary conditions are enforced */
 
-    // temporary variables for enforcement
-    std::vector<float> bdry_velocity(2, 0.0f);
-    std::vector<float> wall_vec(2, 0.0f);
-    std::vector<float> wall_norm(2, 0.0f);
-    float v_dot_n;
+    // temporary variables
+    std::vector<float> bdry_velocity(2, 0.0f);  // velocity of real cell ajacent with wall
+    std::vector<float> wall_vec(2, 0.0f);       // vector that is tangent with wall border
+    std::vector<float> wall_norm(2, 0.0f);      // vector that is normal to the wall border
+    float v_dot_n;  // component of the velocity that is normal to the wall
     int i_bdry;     // i value of the cell that is mirrored by the ghost cell (boundary cell)
     int i_ghost;    // i value of the ghost cell
 
@@ -324,37 +309,21 @@ void Solution::update_BCs() {
 
 
     // outlet boundary condition
-    /*Energy boundary condition:
-        do not apply zero gradient to energy
-        If subsonic:
-            get the exit pressure boundary condition (idk make it same as inlet)
-            If supersonic: Calculate it with the pressure right before the end of the domain (i_max - )
-            
-        <wrong> the python script made both ghost cells have the same value
-        
-        In cizmas's notes, he said that q'' is zero, not q', so it would imply that they have a constant "slope". Ask the TA.
-
-        In the Jameson paper, he said to say p = p_infty, and to do something with eigenvalues? He also says that there are other outer boundary conditions 
-        that have been proposed that are worth investigating. I guess if it isn't playing tennis with the inlet boundary then it's fine? 
-
-        I am calculating energy based on the last density and velocity, not extrapolated density and velocity
-        it looks better this way.
-        this is debatable, and jameson agrees. */
-    
     float exit_v_mag_squared {0.0f};
     for (int i=2; i<i_max-2; i++) {
         for (int j=j_max-2; j<=j_max-1; j++) {
             for (int k=0; k<=3; k++) {
+                // calculate energy boundary condition based on constant gradient
                 new_q[i][j][k] = static_cast<float>(2*new_q[i][j-1][k] - new_q[i][j-2][k]); 
-                // changed the j_max-4 for j-2 and j_max-3 for j-1 if you want to make it constant gradient instead of constant
             }
+            // calculate energy separately: based on exit pressure and current cell values of q1 and q2
             exit_v_mag_squared = (pow(new_q[i][j][1], 2) + pow(new_q[i][j][2], 2)) / pow(new_q[i][j][0], 2);
             new_q[i][j][3] = static_cast<float>(p_infty/(gamma-1) + new_q[i][j][0]*(0.5f*exit_v_mag_squared)); // calculate rho*E
         }
     }
 
 
-    // no penetration wall boundary condition (using ghost cells)
+    // Enforce no penetration wall boundary condition (using ghost cells)
     for (int j = 1; j < j_max; j++) {
         // inner-lower
             i_bdry = 2;
@@ -413,8 +382,7 @@ void Solution::update_BCs() {
 }
 
 void Solution::update_f_g(int i, int j) {
-    // changed from being based on q to being based on new_q
-    // confirmed correct (check 'proofs for fluxes.py')
+    /*Updates the vectors f and g based on new_q*/
     float p = (new_q[i][j][3] - 0.5*(new_q[i][j][1]*new_q[i][j][1] + new_q[i][j][2]*new_q[i][j][2])/new_q[i][j][0])*(gamma-1);
 
     // update f
@@ -431,7 +399,7 @@ void Solution::update_f_g(int i, int j) {
 }
 
 arrayD3 Solution::get_q() {
-    // read-only access of current state for external functions
+    /* read-only access of current state for external functions */
     return new_q;
 }
 
@@ -465,7 +433,10 @@ void Solution::iterate() {
         }   
     }
 
-    std::cout << "Iteration " << iteration_count << "\n";
+    // update residuals every 100
+    if (iteration_count%100 == 0) {
+        std::cout << "Iteration " << iteration_count << "\n";
+    }
     for (int i = 2; i<i_max-2; i++) { // start and end at 2, <i_max-2 because we do not generate a residual for ghost cells (BCs take care of that)
         for (int j = 2; j<j_max-2; j++) {
                         
@@ -513,9 +484,6 @@ void Solution::iterate() {
                 // actual solver mechanics
                 new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * (res[k] - D[i][j][k])); // residual and dissipation
             }
-
-            // safer without this guy
-            //update_f_g(i,j); // update f and g for the current cell
         }
     }
 
