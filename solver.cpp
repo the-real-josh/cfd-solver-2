@@ -246,8 +246,12 @@ std::vector<float> Solution::D(int i, int j) {
     // multiply coefficients by finite differences
     for (int k = 0; k<4; k++) {
         // 2nd order
-        vec_1.push_back((new_q[i][j+1][k] - new_q[i][j][k])*coeff_1  -  (new_q[i][j][k] - new_q[i][j-1][k])*coeff_2);
-        vec_2.push_back((new_q[i+1][j][k] - new_q[i][j][k])*coeff_3  -  (new_q[i][j][k] - new_q[i-1][j][k])*coeff_4);
+        vec_1.push_back((new_q[i][j+1][k] - new_q[i][j+0][k])*coeff_1  -
+                        (new_q[i][j+0][k] - new_q[i][j-1][k])*coeff_2);
+
+
+        vec_2.push_back((new_q[i+1][j][k] - new_q[i+0][j][k])*coeff_3  -
+                        (new_q[i+0][j][k] - new_q[i-1][j][k])*coeff_4);
 
         // 4th order
         vec_3.push_back((new_q[i][j+2][k] - 3*new_q[i][j+1][k] + 3*new_q[i][j+0][k] - new_q[i][j-1][k])*coeff_5 - 
@@ -269,7 +273,7 @@ void Solution::update_BCs() {
     /*input:
         None
     body: 
-        edits q such that boundary conditions are enforced
+        edits new_q such that boundary conditions are enforced
     output: 
         None*/
 
@@ -281,10 +285,10 @@ void Solution::update_BCs() {
     int i_bdry;     // i value of the cell that is mirrored by the ghost cell (boundary cell)
     int i_ghost;    // i value of the ghost cell
 
+    // freestream variables for reference
     float p_infty {static_cast<float>(rho_infty*R*t_infty)};
     float u_infty {static_cast<float>(sqrt(gamma*R*t_infty)*mach_infty)};
     float E_infty {static_cast<float>(0.5*pow(mach_infty * sqrt(gamma*R*t_infty), 2) + (cv*t_infty))};
-
 
     // inlet boundary condition 
     std::vector<float> q_inlet = {
@@ -293,8 +297,6 @@ void Solution::update_BCs() {
         0.0f,                                   // rho*v
         static_cast<float>(rho_infty*E_infty)   // rho*E
     };
-
-
     for (int i = 0; i < i_max;/*< because nodes->cells*/ i++) {
         for (int j = 0; j<=1; j++) {
             for (int k = 0; k<=3; k++) {
@@ -302,6 +304,38 @@ void Solution::update_BCs() {
             }
         }
     }
+
+
+    // outlet boundary condition
+    /*Energy boundary condition:
+        do not apply zero gradient to energy
+        If subsonic:
+            get the exit pressure boundary condition (idk make it same as inlet)
+            If supersonic: Calculate it with the pressure right before the end of the domain (i_max - )
+            
+        <wrong> the python script made both ghost cells have the same value
+        
+        In cizmas's notes, he said that q'' is zero, not q', so it would imply that they have a constant "slope". Ask the TA.
+
+        In the Jameson paper, he said to say p = p_infty, and to do something with eigenvalues? He also says that there are other outer boundary conditions 
+        that have been proposed that are worth investigating. I guess if it isn't playing tennis with the inlet boundary then it's fine? 
+
+        I am calculating energy based on the last density and velocity, not extrapolated density and velocity
+        it looks better this way.
+        this is debatable, and jameson agrees. */
+    
+    float exit_v_mag_squared {0.0f};
+    for (int i=2; i<i_max-2; i++) {
+        for (int j=j_max-2; j<=j_max-1; j++) {
+            for (int k=0; k<=3; k++) {
+                new_q[i][j][k] = static_cast<float>(2*new_q[i][j-1][k] - new_q[i][j-2][k]); 
+                // changed the j_max-4 for j-2 and j_max-3 for j-1 if you want to make it constant gradient instead of constant
+            }
+            exit_v_mag_squared = (pow(new_q[i][j][1], 2) + pow(new_q[i][j][2], 2)) / pow(new_q[i][j][0], 2);
+            new_q[i][j][3] = static_cast<float>(p_infty/(gamma-1) + new_q[i][j][0]*(0.5*exit_v_mag_squared)); // calculate rho*E
+        }
+    }
+
 
     // no penetration wall boundary condition (using ghost cells)
     for (int j = 1; j < j_max; j++) {
@@ -359,38 +393,6 @@ void Solution::update_BCs() {
             };        
     }
 
-
-
-    // outlet boundary condition
-
-    /*Energy boundary condition:
-        do not apply zero gradient to energy
-        If subsonic:
-            get the exit pressure boundary condition (idk make it same as inlet)
-            If supersonic: Calculate it with the pressure right before the end of the domain (i_max - )
-            
-        the python script made both ghost cells have the same value
-        
-        In cizmas's notes, he said that q'' is zero, not q', so it would imply that they have a constant "slope". Ask the TA.
-
-        In the Jameson paper, he said to say p = p_infty, and to do something with eigenvalues? He also says that there are other outer boundary conditions 
-        that have been proposed that are worth investigating. I guess if it isn't playing tennis with the inlet boundary then it's fine? 
-
-        I am calculating energy based on the last density and velocity, not extrapolated density and velocity
-        it looks better this way.
-        this is debatable, and jameson agrees. */
-    
-    float exit_v_mag_squared {0.0f};
-    for (int i=2; i<i_max-2; i++) {
-        for (int j=j_max-2; j<=j_max-1; j++) {
-            for (int k=0; k<=3; k++) {
-                new_q[i][j][k] = static_cast<float>(2*new_q[i][j_max-3][k] - new_q[i][j_max-4][k]); 
-                // change the j_max-4 for j-2 and j_max-3 for j-1 if you want to make it constant gradient instead of zero gradient
-            }
-            exit_v_mag_squared = (pow(new_q[i][j_max-4][1], 2) + pow(new_q[i][j_max-4][2], 2)) / pow(new_q[i][j_max-4][0], 2);
-            new_q[i][j][3] = static_cast<float>(p_infty/(gamma-1) + new_q[i][j_max-4][0]*(0.5*exit_v_mag_squared)); // calculate rho*E
-        }
-    }
 }
 
 void Solution::update_f_g(int i, int j) {
