@@ -418,7 +418,7 @@ def main():
     core_dimensions = [(10,50)] # core mesh shapes
 
     # core_dimensions = [(40,200)] # unstable after 2800 iterations at mach 0.3
-    machs = [0.3]
+    machs = [0.30]
     for c_dim in core_dimensions:
 
         # mesh file name
@@ -444,7 +444,7 @@ def main():
                 mach=mach,
                 results_fname=results_fname,
                 mesh_fname=mesh_fname,
-                max_iterations=950) 
+                max_iterations=700) 
         
             plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)
             residuals = pd.read_csv('residuals.csv')['residuals'].to_numpy()

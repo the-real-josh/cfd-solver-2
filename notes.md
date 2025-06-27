@@ -43,3 +43,6 @@ Dissipations:
 
 # DEBUGGING DUCK
 https://www.lowtoxlife.com/wp-content/uploads/2016/05/Screen-Shot-2016-05-05-at-4.07.33-pm-862x801.png
+
+
+# energy appears to be significantly increasing from inlet

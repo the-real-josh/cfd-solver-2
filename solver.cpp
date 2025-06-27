@@ -85,35 +85,34 @@ float Solution::l(int i, int j, float off_i, float off_j) {
     // debugged with Ducky
 
     float small {0.001};
+    float dy;
+    float dx;
 
-    // I know it's terrible, but it's easy to diagnose for now.
     if (fabs(off_j-0.5) < small && fabs(off_i) < small) { // 
-        return sqrt(
-        pow(mesh_data[i][j+1][0] - mesh_data[i+1][j+1][0], 2) + 
-        pow(mesh_data[i][j+1][1] - mesh_data[i+1][j+1][1], 2));
+        dy = (mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1]);
+        dx = (mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0]);
     }
     else if (fabs(off_i-0.5) < small && fabs(off_j) < small) {
-        return sqrt(
-        pow(mesh_data[i+1][j][0] - mesh_data[i+1][j+1][0], 2) + 
-        pow(mesh_data[i+1][j][1] - mesh_data[i+1][j+1][1], 2));
+        dy = (mesh_data[i+1][j][1]-mesh_data[i+1][j+1][1]);
+        dx = (mesh_data[i+1][j][0]-mesh_data[i+1][j+1][0]);
     }
     else if (fabs(off_j+0.5) < small && fabs(off_i) < small) {
-        return sqrt(
-        pow(mesh_data[i][j][0] - mesh_data[i+1][j][0], 2) + 
-        pow(mesh_data[i][j][1] - mesh_data[i+1][j][1], 2));
+        dy = (mesh_data[i][j][1]-mesh_data[i+1][j][1]);
+        dx = (mesh_data[i][j][0]-mesh_data[i+1][j][0]);
     }
     else if (fabs(off_i+0.5) < small && fabs(off_j) < small) {
-        return sqrt(
-        pow(mesh_data[i][j][0] - mesh_data[i][j+1][0], 2) + 
-        pow(mesh_data[i][j][1] - mesh_data[i][j+1][1], 2));
+        dy = (mesh_data[i][j+1][1]-mesh_data[i][j][1]);
+        dx = (mesh_data[i][j+1][0]-mesh_data[i][j][0]);
     } else {
-        std::cout << "Need to select a wall in order to get its length (oi = " << off_i << " and oj = " << off_j << "), ie they were zero)\n";
+        std::cout << "Please select a wall to get the eigenvalue at.";
         exit(1);
-        return 0.0f;
     }
+
+    return static_cast<float>(sqrt(dy*dy + dx*dx));
 }
 
 float Solution::lambda(int i, int j, float off_i, float off_j) {
+    // ducky approved
     float speed_o_sound_sonic {static_cast<float>(sqrt(gamma*R*T(i, j)))};
 
     std::vector<float> cell_V {static_cast<float>(new_q[i][j][1]/new_q[i][j][0]),
@@ -166,7 +165,6 @@ float Solution::pdf_lambda(int i, int j, float off_i, float off_j) {
 
 
 float Solution::switch_2_xi(int i, int j, float off_i, float off_j) {
-
     if (fabs(off_i) > 0.01) {
         std::cout << "Error in switch_2_xi";
         exit(1);
@@ -234,16 +232,16 @@ std::vector<float> Solution::D(int i, int j) {
     std::vector<float> final_dissipation;
 
     // 2nd order coefficients
-    float coeff_1 = switch_2_xi(i,j,0.0f,0.5) * l(i,j,0.0f,0.5) * lambda(i,j,0.0f,0.5);
-    float coeff_2 = switch_2_xi(i,j,0.0f,-0.5) * l(i,j,0.0f,-0.5) * lambda(i,j,0.0f,-0.5);
-    float coeff_3 = switch_2_eta(i,j,0.5,0.0f) * l(i,j,0.5,0.0f) * lambda(i,j,0.5,0.0f);
-    float coeff_4 = switch_2_eta(i,j,-0.5,0.0f) * l(i,j,-0.5,0.0f) * lambda(i,j,-0.5,0.0f);
+    float coeff_1 = switch_2_xi(i,j,   0.0f,  0.5f) * l(i,j,  0.0f,  0.5f) * lambda(i,j,  0.0f,  0.5f);
+    float coeff_2 = switch_2_xi(i,j,   0.0f, -0.5f) * l(i,j,  0.0f, -0.5f) * lambda(i,j,  0.0f, -0.5f);
+    float coeff_3 = switch_2_eta(i,j,  0.5f,  0.0f) * l(i,j,  0.5f,  0.0f) * lambda(i,j,  0.5f,  0.0f);
+    float coeff_4 = switch_2_eta(i,j, -0.5f,  0.0f) * l(i,j, -0.5f,  0.0f) * lambda(i,j, -0.5f,  0.0f);
 
     // 4th order coefficients
-    float coeff_5 = switch_4_xi(i,j,0.0f,0.5) * l(i,j,0.0f,0.5) * lambda(i,j,0.0f,0.5);
-    float coeff_6 = switch_4_xi(i,j,0.0f,-0.5) * l(i,j,0.0f,-0.5) * lambda(i,j,0.0f,-0.5);
-    float coeff_7 = switch_4_eta(i,j,0.5,0.0f) * l(i,j,0.5,0.0f) * lambda(i,j,0.5,0.0f);
-    float coeff_8 = switch_4_eta(i,j,-0.5,0.0f) * l(i,j,-0.5,0.0f) * lambda(i,j,-0.5,0.0f);
+    float coeff_5 = switch_4_xi(i,j,  0.0f,  0.5f) * l(i,j,  0.0f,  0.5f) * lambda(i,j,  0.0f,  0.5f);
+    float coeff_6 = switch_4_xi(i,j,  0.0f, -0.5f) * l(i,j,  0.0f, -0.5f) * lambda(i,j,  0.0f, -0.5f);
+    float coeff_7 = switch_4_eta(i,j, 0.5f,  0.0f) * l(i,j,  0.5f,  0.0f) * lambda(i,j,  0.5f,  0.0f);
+    float coeff_8 = switch_4_eta(i,j,-0.5f,  0.0f) * l(i,j, -0.5f,  0.0f) * lambda(i,j, -0.5f,  0.0f);
 
     // multiply coefficients by finite differences
     for (int k = 0; k<4; k++) {
@@ -252,11 +250,11 @@ std::vector<float> Solution::D(int i, int j) {
         vec_2.push_back((new_q[i+1][j][k] - new_q[i][j][k])*coeff_3  -  (new_q[i][j][k] - new_q[i-1][j][k])*coeff_4);
 
         // 4th order
-        vec_3.push_back((new_q[i][j+2][k] - 3*new_q[i][j+1][k] + 3*new_q[i][j][k] - new_q[i-1][j][k])*coeff_5 - 
-                        (new_q[i][j+1][k] - 3*new_q[i][j][k] + 3*new_q[i][j-1][k] - new_q[i][j-2][k])*coeff_6);
+        vec_3.push_back((new_q[i][j+2][k] - 3*new_q[i][j+1][k] + 3*new_q[i][j+0][k] - new_q[i][j-1][k])*coeff_5 - 
+                        (new_q[i][j+1][k] - 3*new_q[i][j+0][k] + 3*new_q[i][j-1][k] - new_q[i][j-2][k])*coeff_6);
 
-        vec_4.push_back((new_q[i+2][j][k] - 3*new_q[i+1][j][k] + 3*new_q[i][j][k] - new_q[i-1][j][k])*coeff_7 - 
-                        (new_q[i+1][j][k] - 3*new_q[i][j][k] + 3*new_q[i-1][j][k] - new_q[i-2][j][k])*coeff_8);
+        vec_4.push_back((new_q[i+2][j][k] - 3*new_q[i+1][j][k] + 3*new_q[i+0][j][k] - new_q[i-1][j][k])*coeff_7 - 
+                        (new_q[i+1][j][k] - 3*new_q[i+0][j][k] + 3*new_q[i-1][j][k] - new_q[i-2][j][k])*coeff_8);
     }
 
     // sum all the terms
