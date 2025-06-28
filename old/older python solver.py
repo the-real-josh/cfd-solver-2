@@ -500,7 +500,7 @@ def run(x_list, y_list, mach):
         # dissipation calculators
         def ind(k):
             """indexify an index"""
-            assert np.isclose(k%1, 0), "Index issue - irl your indeces can only be integers"
+            assert np.isclose(k%1, 0), "Index issue - irl your indices can only be integers"
             return int(np.round(k))
 
         def lamb(j, i, og=-1/2):
@@ -525,7 +525,7 @@ def run(x_list, y_list, mach):
             j_split = int(not np.isclose(i_round, 0))
             i_split = int(not np.isclose(j_round, 0))
 
-            # node indeces
+            # node indices
             j1 = j_base + j_round
             j2 = j_base + j_round + j_split
 
@@ -571,7 +571,7 @@ def run(x_list, y_list, mach):
             return vn_abs + a_cell
 
         def l(j,i):
-            """input: off-integer indeces on either i or j \n
+            """input: off-integer indices on either i or j \n
             returns: the length of the face using pythag"""
             j_ll = int(np.round(j-epsilon))
             i_ll = int(np.round(i-epsilon))
@@ -607,7 +607,7 @@ def run(x_list, y_list, mach):
                 return diff2_xi(obj, j, i+1/2) - diff2_xi(obj, j, i-1/2)
 
         def q(j, i):
-            """input: on-integer indeces\n
+            """input: on-integer indices\n
                 returns: cell data"""
             return cell_data[ind(j), ind(i), :]
 

@@ -34,8 +34,8 @@ g3 = rho*E*v + p*v # rho*v*(E + p/rho)
 
 boil = lambda a: sym.simplify(a.subs(relations).subs(relations).subs(relations)) 
 
-# need to represnet f0...f3 in terms of q
-# need to represnet g0...g3 in terms of q
+# need to represent f0...f3 in terms of q
+# need to represent g0...g3 in terms of q
 
 # proofs for f
 f0s = q1

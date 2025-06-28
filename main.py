@@ -317,7 +317,7 @@ def plot_results_pv(mesh_core_dimensions=None, mesh_fname=None, results_fname=No
 
     # extract results
     df = pd.read_csv(results_fname)
-    data_dimensions = [k+4 for k in mesh_core_dimensions] # cells have maximum indeces one less
+    data_dimensions = [k+4 for k in mesh_core_dimensions] # cells have maximum indices one less
     rho = df['rho'].to_numpy().reshape(data_dimensions)
     u = np.divide(df['rho_u'].to_numpy().reshape(data_dimensions), rho)
     v = np.divide(df['rho_v'].to_numpy().reshape(data_dimensions), rho)
