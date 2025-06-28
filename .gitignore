@@ -34,4 +34,6 @@
 *.out
 *.app
 
+#  Results
 *.csv
+*.png

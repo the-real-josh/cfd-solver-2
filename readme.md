@@ -107,3 +107,8 @@ This project started as a final project for the class AERO415. I initially wrote
  2) numerical divergence - Even after the multiple hours of running, the solver was unable to converge on a result, and the residuals would eventually increase to infinity.
 
 While a lot of people would have walked away and never looked back (since the semester was over, after all, and any grade incentive would have been eliminated), I could not walk away bested by this challenge. I chose to sink hours and hours into this code for the same reason that I chose to study aerospace engineering in the first place. In the words of President Kennedy, I do these things ***"not because they are easy, but because they are hard."***
+
+# THINGS TO ADD IN THE FUTURE
+ - Force on bump calculator
+ - Grid-independence testing 
+ - far future: put geometry in the middle of the tunnel (difficult)

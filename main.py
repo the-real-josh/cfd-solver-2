@@ -80,7 +80,7 @@ class Mesh:
         # xi_list, eta_list = np.meshgrid(np.linspace(0, 1, num=j_max), np.linspace(0,1, num=i_max))
 
         # test plot
-        plt.title(f'Algebraic Grid in ξ-η Space'); plt.plot(eta_list, xi_list, marker='.', color='k', linestyle='none'); plt.xlabel('eta, or j'); plt.ylabel('xi, or i'); plt.show()
+        # plt.title(f'Algebraic Grid in ξ-η Space'); plt.plot(eta_list, xi_list, marker='.', color='k', linestyle='none'); plt.xlabel('eta, or j'); plt.ylabel('xi, or i'); plt.show()
         
         # algebraic grid
         x_list = np.zeros((i_max, j_max), dtype=float)
@@ -101,7 +101,7 @@ class Mesh:
                     print(y_list)
                     exit()
 
-        plt.title(f'Algebraic Grid in x-y Space'); plt.plot(x_list, y_list, marker='.', color='k', linestyle='none'); plt.show()
+        # plt.title(f'Algebraic Grid in x-y Space'); plt.plot(x_list, y_list, marker='.', color='k', linestyle='none'); plt.show()
 
         # preliminary calcs
         delta_xi = 1/(j_max)
@@ -112,7 +112,7 @@ class Mesh:
         # min_residual = 1e-6 # residual floor
 
         aggregate_residuals = np.zeros((max_iterations+1))
-        print(f'Beginning a maximum of {max_iterations} iterations.\nCurrent iteration:  ', end='')
+        print(f'Beginning a maximum of {max_iterations} mesh iterations.\nCurrent iteration:  ', end='')
 
         iterations = 0
         while iterations < max_iterations:
@@ -359,7 +359,7 @@ def plot_results_pv(mesh_core_dimensions=None, mesh_fname=None, results_fname=No
 
     # give output
     if not verbose:
-        plotter.screenshot(f'velocities.png')
+        plotter.screenshot(f'{results_fname}-velocities.png')
     elif verbose:
         plotter.show()
 
@@ -399,7 +399,7 @@ def plot_results_pv(mesh_core_dimensions=None, mesh_fname=None, results_fname=No
 
         # give output
         if not verbose:
-            plotter.screenshot(f'{savedir}{caption}.png')
+            plotter.screenshot(f'{results_fname}-{caption}.png')
         elif verbose:
             plotter.show()
 
@@ -412,13 +412,12 @@ def plot_results_pv(mesh_core_dimensions=None, mesh_fname=None, results_fname=No
 #  - max cell index: n-1
 #  - max node index: n
 #  - number of nodes: n+1
-def main():
+def main_test():
     # generate mesh
     # i is no longer 
-    core_dimensions = [(10,50)] # core mesh shapes
+    core_dimensions = [(40,200), (10,50)] # core mesh shapes
 
-    # core_dimensions = [(40, 200)] # unstable after 2800 iterations at mach 0.3
-    machs = [0.50]
+    machs = [0.70, 0.30]
     for c_dim in core_dimensions:
 
         # mesh file name
@@ -444,12 +443,60 @@ def main():
                 mach=mach,
                 results_fname=results_fname,
                 mesh_fname=mesh_fname,
-                max_iterations=50000) 
+                max_iterations=350000) 
         
             plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)
             residuals = pd.read_csv('residuals.csv')['residuals'].to_numpy()
             plt.plot(np.arange(0,len(residuals)), residuals); plt.yscale('log'); plt.title('residuals')
             plt.xlabel('Full iteration count'); plt.ylabel('Average cell residual magnitude'); plt.show()
 
+def main_full():
+    # full run sequence 
+    # avoid previously ran test cases
+    # save results to files
+    # uses empirical formula for number of iterations to run
+
+    estimate_iterations = lambda dim: int(2500*np.sqrt(dim[0]*dim[1]) + 15*dim[0]*dim[1])
+
+    # generate mesh
+    core_dimensions = [(35,175), (40,200)] # core mesh shapes
+    machs = [0.3, 0.5, 0.7]
+    for c_dim in core_dimensions:
+
+        # mesh file name
+        mesh_fname = f'mesh_sh={c_dim[0]}x{c_dim[1]}.csv'
+
+        # generate mesh
+        my_mesh = Mesh(c_dim) 
+        try:
+            my_mesh.read(mesh_fname)
+        except FileNotFoundError:
+            my_mesh.generate() # generate the mesh
+            my_mesh.ghostify() # saved mesh must be ghostified.
+            my_mesh.save(mesh_fname)
+            # my_mesh.plot() 
+
+        # my_mesh.plot() # 
+
+        # run solver
+        for mach in machs:
+
+            results_fname = f'results_sh={c_dim[0]}x{c_dim[1]} M={mach}.csv'
+ 
+            # avoid previous test case:
+            run(mesh_core_dimensions=c_dim,
+                mach=mach,
+                results_fname=results_fname,
+                mesh_fname=mesh_fname,
+                max_iterations=estimate_iterations(c_dim)) 
+        
+            plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname, verbose=False)
+            residuals = pd.read_csv('residuals.csv')['residuals'].to_numpy()
+            plt.plot(np.arange(0,len(residuals)), residuals); plt.yscale('log'); plt.title('residuals')
+            plt.xlabel('Full iteration count'); plt.ylabel('Average cell residual magnitude'); 
+            plt.savefig(f'{results_fname}-residuals.png'); plt.clf()
+
+
 if __name__ == "__main__":
-    main()
+    main_full()
+    main_test()

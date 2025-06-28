@@ -1,5 +1,6 @@
 #include <iostream>
 #include "solver.h"
+#include <cmath>
 
 int main() {
     // get solver configuration (from python)
@@ -13,6 +14,15 @@ int main() {
     // run the solver
     for (int i = 0; i<=max_iterations; i++) {
         sol.iterate();
+
+        // check for convergence every 500
+        if (i%500==0 && i>=17000) {
+            if (sol.residuals[round(i/4)-1] > (0.95)*sol.residuals[round(i/4)-4000]) {
+                // if residuals are not halfing every 150, then it has probably converged
+                std::cout<< "Convergence detected. Residual is " << sol.residuals[round(i/4)-1] << "and 800 iterations ago it was " << sol.residuals[round(i/4)-150] << "\n";
+                break;
+            }
+        }
     }
 
     // save results

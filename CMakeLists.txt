@@ -4,6 +4,7 @@ project (solver_engine) # Project name, any name
 include(Ctest) # for testing in the future
 enable_testing()
 
+add_compile_options(-O2)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
