@@ -1,8 +1,6 @@
 #include <iostream>
 #include "solver.h"
 
-
-
 int main() {
     // get solver configuration (from python)
     get_config();

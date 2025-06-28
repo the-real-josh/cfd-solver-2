@@ -1,5 +1,5 @@
 #include <iostream> // console messages
-#include <vector> // vectors my beloved
+#include <vector> 
 #include "csv.hpp" // do not need paths because that is taken care of in the includepaths in cmake
 #include "solver.h"
 
@@ -7,8 +7,8 @@
 int i_max;
 int j_max;
 int max_iterations;
-float t_infty; // kelvin
-float rho_infty; // pascals
+float t_infty;      // kelvin
+float rho_infty;    // pascals
 float mach_infty;
 std::string mesh_fname;
 std::string res_fname;
@@ -37,13 +37,10 @@ void get_config() {
 }
 
 arrayD3 get_mesh_data() {
-    std::cout << "mesh data getter reporting\n";
+    std::cout << "Retrieving Mesh Data\n";
 
-    // TODO: find out the dimensions from config file or cin
-    // np.size-like. ie, an array {1, 1, 1} has n_cols of 3 and n_rows of 0
-
-    // get the data
     arrayD2 flat_mesh_data;
+    arrayD3 mesh_data;
 
     // read csv in flat-paired form
     csv::CSVReader reader(mesh_fname);
@@ -54,21 +51,12 @@ arrayD3 get_mesh_data() {
 
     // reshape into proper dimensions
 
-    // declare mesh_data
-    arrayD3 mesh_data;
-
     // assert that the given dimensions match the data
     std::cout << "mesh data size: " << flat_mesh_data.size() << "\n";
     std::cout << "mesh integer division: " << flat_mesh_data.size() % (i_max+1) << "\n";
+    if(flat_mesh_data.size() % (i_max+1) != 0 ) throw std::domain_error( "bad #cols" ) ;
 
-    //if(i_max == 0 || flat_mesh_data.size()%i_max != 0 ) throw std::domain_error( "bad #cols" ) ;
-
-    // fill up mesh_data
-    // is <= because need to include top row, and to access the things at the end of the top row, you need to go to the end of the top row
-    // is i_max+1 because there are 6 node elements for max index of 5.
-
-    // why <= and i_max+1?
-    // see readme.txt#about cell indexing##converting. You are going from max index of nodes to max number of nodes.
+    /* why <= and i_max+1?   see readme.txt#about cell indexing##converting. You are going from max index of nodes to max number of nodes. */
     for (int i = 0; i <= i_max; i++) {
         // one whole row each iteration using 
         mesh_data.push_back(
@@ -77,12 +65,9 @@ arrayD3 get_mesh_data() {
         );
     }
 
-
-    // return it as an arrayD3
     return mesh_data;
 }
 
-// bug: only outputs data in 13x24 instead of 14x25 as it should
 void save_data(arrayD3 q_out, std::string out_filename) {
     /* save the data
        saving format: 4 columns for each of the state variables */
@@ -102,10 +87,8 @@ void save_data(arrayD3 q_out, std::string out_filename) {
         }
     }
 
-
-    // debugging message
+    // Status message
     std::cout << "Data saver: data has dimensions of i,j " << q_out.size() << "," << q_out[0].size() << "\n";
-
     
     // write to the output file
     std::ofstream file(out_filename);

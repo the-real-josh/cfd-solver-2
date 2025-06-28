@@ -1,7 +1,7 @@
-#include <iostream> // console messages
-#include <vector> // vectors my beloved
-#include "csv.hpp"
-#include "solver.h"
+#include <iostream> 
+#include <vector>   
+#include "csv.hpp"  
+#include "solver.h" 
 #include <cmath>
 
 void Solution::innit(arrayD3 _mesh_data) {
@@ -104,7 +104,8 @@ float Solution::l(int i, int j, float off_i, float off_j) {
 
 float Solution::lambda(int i, int j, float off_i, float off_j) {
     /*Returns the fastest wave speed at i,j in a direction specified by off_i, off_j*/
-    float speed_o_sound_sonic {static_cast<float>(sqrt(gamma*R*T(i, j)))};
+    
+    float speed_of_sound {static_cast<float>(sqrt(gamma*R*T(i, j)))};
 
     std::vector<float> cell_V {static_cast<float>(new_q[i][j][1]/new_q[i][j][0]),
                                static_cast<float>(new_q[i][j][2]/new_q[i][j][0])};
@@ -135,8 +136,8 @@ float Solution::lambda(int i, int j, float off_i, float off_j) {
     std::vector<float> normal = {static_cast<float>(dy/sqrt(dy*dy + dx*dx)),
                                  static_cast<float>(-dx/sqrt(dy*dy + dx*dx))};
 
-    // returns the eigenvalue at the cell
-    return static_cast<float>(fabs(cell_V[0]*normal[0] + cell_V[1]*normal[1]) + speed_o_sound_sonic);
+    // returns the eigenvalue at the cell - abs(Dot product of velocity with cell wall normal), plus speed of sound
+    return static_cast<float>(fabs(cell_V[0]*normal[0] + cell_V[1]*normal[1]) + speed_of_sound);
 }
 
 
@@ -218,7 +219,6 @@ std::vector<float> Solution::update_D(int i, int j) {
     /* Gives the correct dissipation value at any given cell i,j
         Applies Jameson second and fourth order dissipation terms to damp out the euler-instability wiggles and aid convergence on a solution.*/
 
-    // declare
     std::vector<float> final_dissipation(4, 0.0f);
 
     // 2nd order coefficients
@@ -304,7 +304,7 @@ void Solution::update_BCs() {
     }
 
 
-    // Enforce no penetration wall boundary condition (using ghost cells)
+    // No penetration wall boundary condition (using ghost cells)
     for (int j = 1; j < j_max; j++) {
         // inner-lower
             i_bdry = 2;
@@ -359,11 +359,11 @@ void Solution::update_BCs() {
                 new_q[i_bdry][j][3]
             };        
     }
-
 }
 
 void Solution::update_f_g(int i, int j) {
     /*Updates the vectors f and g based on new_q*/
+    
     float p = (new_q[i][j][3] - 0.5*(new_q[i][j][1]*new_q[i][j][1] + new_q[i][j][2]*new_q[i][j][2])/new_q[i][j][0])*(gamma-1);
 
     // update f
@@ -394,17 +394,17 @@ void Solution::iterate() {
 
     float ag_res = 0.0f; // aggregate residual
 
+    // for cell normals
     float dx_e;
     float dx_n;
     float dx_w;
     float dx_s;
-
     float dy_e;
     float dy_n;
     float dy_w;
     float dy_s;
 
-    // allocations for calculation tools
+    // Cell residual
     std::vector<float> res(4, 0.0f);
 
     // update all f and g
@@ -414,14 +414,16 @@ void Solution::iterate() {
         }   
     }
 
-    // update residuals every 100
+    // Print iteration count every 100
     if (iteration_count%100 == 0) {
         std::cout << "Iteration " << iteration_count << "\n";
     }
+
+    // residual calculation for all cells
     for (int i = 2; i<i_max-2; i++) { // start and end at 2, <i_max-2 because we do not generate a residual for ghost cells (BCs take care of that)
         for (int j = 2; j<j_max-2; j++) {
                         
-            // cell wall deltas (correct and in-line with py script)
+            // cell wall deltas: East, North, West, South, counterclockwise
             dy_e =  (mesh_data[i+1][j+1][1]-mesh_data[i][j+1][1]);
             dx_e =  (mesh_data[i+1][j+1][0]-mesh_data[i][j+1][0]);
 
@@ -449,30 +451,29 @@ void Solution::iterate() {
                 } 
             }
 
-            // RE-calculate dissipation $\vec D$ every 4. curr_dissipation is a class-wide 3D array, so it will persist between iterations.
+            // RE-calculate dissipation D every 4 iterations. 
+            // curr_dissipation is a class-wide 3D array, so it will persist between iterations.
             if (iteration_count%4 == 0) {
                 D[i][j] = update_D(i, j);
             }
 
-            // half index notation is stupid. Henceforth, we will have i,j,i_offset,j_offset
+            // Value for calculation of time-step
             sum_l_lamb = sqrt(pow(dx_e, 2)+pow(dy_e, 2)) * lambda(i, j, 0.0f, 0.5f) +
                          sqrt(pow(dx_n, 2)+pow(dy_n, 2)) * lambda(i, j, 0.5f, 0.0f) +
                          sqrt(pow(dx_w, 2)+pow(dy_w, 2)) * lambda(i, j, 0.0f, -0.5f) +
                          sqrt(pow(dx_s, 2)+pow(dy_s, 2)) * lambda(i, j, -0.5f, 0.0f);
 
-            // update the new q
+            // update the new_q state vector
             for (int k = 0; k<4; k++) {
-                // actual solver mechanics
                 new_q[i][j][k] = static_cast<float>(q[i][j][k] - (alpha * CFL * 2 / sum_l_lamb) * (res[k] - D[i][j][k])); // residual and dissipation
             }
         }
     }
 
-    update_BCs();           // update the boundary conditions to match inner calculations
+    update_BCs();
 
-    // update q based on intermediate q
+    // After a full iteration (4 minor iterations)
     if (iteration_count%4 == 3) {
-
         // residual calculation
         for (int i = 0; i<i_max-2; i++) {
             for (int j = 0; j<j_max-2; j++) {
@@ -484,9 +485,8 @@ void Solution::iterate() {
         ag_res /= (i_max-2)*(j_max-2);
         residuals.push_back(ag_res);
 
-        // update inner cells based on inner calculations
+        // Update official state vector q, after one full iteration (4 minor iterations)
         q = new_q;             
-
     }
 
     iteration_count++;      // update iteration counter

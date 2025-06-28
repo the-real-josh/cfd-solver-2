@@ -448,7 +448,7 @@ def main():
         
             plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname)
             residuals = pd.read_csv('residuals.csv')['residuals'].to_numpy()
-            plt.plot(np.arange(0,len(residuals)), residuals); plt.yscale('log'); plt.title('residuals');
+            plt.plot(np.arange(0,len(residuals)), residuals); plt.yscale('log'); plt.title('residuals')
             plt.xlabel('Full iteration count'); plt.ylabel('Average cell residual magnitude'); plt.show()
 
 if __name__ == "__main__":
