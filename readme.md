@@ -1,9 +1,11 @@
-# ABOUT
-This project started as a final project for the class AERO415. I initially wrote a CFD solver in Python, because that was what I was familiar with. Even after pouring about a week of 14+ hour, highly focused workdays into the project, it still had two issues:
- 1) slowness - The Python script took multiple hours to run a satisfactory number of iterations, even in the most crude case. This was after spending a significant amount of time trying to optimize the Python. I investigated Cython, CuPy, and NumPy vectorization. I recall the script taking about twenty seconds to run a SINGLE iteration on 50x200 mesh. This is unacceptable. After recreating my code in C++, I found the unoptimized C++ to be about 300x faster than the unoptimized Python.
- 2) numerical divergence - Even after the multiple hours of running, the solver was unable to converge on a result, and the residuals would eventually increase to infinity.
+# CFD SOLVER 2
+An Euler CFD solver with Jameson-Schmidt-Turkel dissipation.
 
-While a lot of people would have walked away and never looked back (since the semester was over, after all, and any grade incentive would have been eliminated), I could not walk away bested by this challenge. I chose to finish this code for the same reason that I chose to study aerospace engineering in the first place. In the words of President Kennedy, I do these things ***"not because they are easy, but because they are hard."***
+![Energy plot of fine mesh](https://i.imgur.com/p7jj0Je.png)
+
+![Velocity plot of course mesh](https://i.imgur.com/ofNWw1m.png)
+
+![Convergence plot of course mesh](https://i.imgur.com/0fdcTwR.png)
 
 # OVERALL STRUCTURE
 ## How to Run
@@ -99,3 +101,9 @@ Cell walls:
  - To Matthew Schultz, Ciprian Comsa, and Jay Standridge, for their encouragement and advice
 
 
+# ABOUT
+This project started as a final project for the class AERO415. I initially wrote a CFD solver in Python, because that was what I was familiar with. Even after pouring about a week of 14+ hour, highly focused workdays into the project, it still had two issues:
+ 1) slowness - The Python script took multiple hours to run a satisfactory number of iterations, even in the most crude case. This was after spending a significant amount of time trying to optimize the Python. I investigated Cython, CuPy, and NumPy vectorization. I recall the script taking about twenty seconds to run a SINGLE iteration on 50x200 mesh. This is unacceptable. After recreating my code in C++, I found the unoptimized C++ to be about 300x faster than the unoptimized Python.
+ 2) numerical divergence - Even after the multiple hours of running, the solver was unable to converge on a result, and the residuals would eventually increase to infinity.
+
+While a lot of people would have walked away and never looked back (since the semester was over, after all, and any grade incentive would have been eliminated), I could not walk away bested by this challenge. I chose to sink hours and hours into this code for the same reason that I chose to study aerospace engineering in the first place. In the words of President Kennedy, I do these things ***"not because they are easy, but because they are hard."***
