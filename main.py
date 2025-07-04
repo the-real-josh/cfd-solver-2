@@ -32,14 +32,17 @@ class Mesh:
                 return idx-1
             else:
                 return idx
-            
+        
+        def symmetric_naca_airfoil(x):
+            t = self.bump_height # thickness parameter
+            return 5*t*(0.2969*np.sqrt(x) - 0.1260*x - 0.3516*x**2 + 0.2843*x**3 - 0.1015*x**4)
         # DEFINE FUNCTIONS FOR THE TOP AND BOTTOM OF CV
         def y_lower(x):
             # return 0
             if 0 <= x <= 2:
                 return 0.0
             elif 2 < x <= 3:
-                return self.bump_height*np.sin((x-2)*3.14159)
+                return symmetric_naca_airfoil(x-2)
             elif 3 < x <= 5:
                 return 0.0
             else:
@@ -50,7 +53,7 @@ class Mesh:
             if 0 <= x <= 2:
                 return 1.0
             elif 2 < x <= 3:
-                return 1.0-self.bump_height*np.sin((x-2)*3.14159)
+                return 1.0-symmetric_naca_airfoil(x-2)
             elif 3 < x <= 5:
                 return 1.0
             else:
@@ -101,7 +104,7 @@ class Mesh:
                     print(y_list)
                     exit()
 
-        # plt.title(f'Algebraic Grid in x-y Space'); plt.plot(x_list, y_list, marker='.', color='k', linestyle='none'); plt.show()
+        plt.title(f'Algebraic Grid in x-y Space'); plt.plot(x_list, y_list, marker='.', color='k', linestyle='none'); plt.show()
 
         # preliminary calcs
         delta_xi = 1/(j_max)
@@ -135,30 +138,29 @@ class Mesh:
             iter_residual = 0
             for i,j in iter_set:
                 # corner points
-                if (corner_point(i, j)):
-                    if i == 0 and j < j_max/2:
-                        new_x_val = 2.0
-                        new_y_val = 0.0
-                        y_list[i, j] = new_y_val
-                    elif i == i_max - 1 and j < j_max/2:
-                        new_x_val = 2.0
-                        new_y_val = 1.0
-                        y_list[i, j] = new_y_val
-                    elif i == 0 and j > j_max/2:
-                        new_x_val = 3.0
-                        new_y_val = 0.0
-                    elif i == i_max-1 and j > j_max/2:
-                        new_x_val = 3.0
-                        new_y_val = 1.0
+                # if (corner_point(i, j)):
+                #     if i == 0 and j < j_max/2:
+                #         new_x_val = 2.0
+                #         new_y_val = 0.0
+                #         y_list[i, j] = new_y_val
+                #     elif i == i_max - 1 and j < j_max/2:
+                #         new_x_val = 2.0
+                #         new_y_val = 1.0
+                #         y_list[i, j] = new_y_val
+                #     elif i == 0 and j > j_max/2:
+                #         new_x_val = 3.0
+                #         new_y_val = 0.0
+                #     elif i == i_max-1 and j > j_max/2:
+                #         new_x_val = 3.0
+                #         new_y_val = 1.0
 
                 # boundary conditions
-                elif i in [0, i_max - 1]: # for top and bottom
+                if i in [0, i_max - 1]: # for top and bottom
                     if x_list[i, j] < 2 or x_list[i, j] > 3:
                         try: 
                             new_x_val = x_list[i+1, j]
                         except:
                             new_x_val = x_list[i-1, j]
-                        new_x_val = x_list[i,j] # override for corner points
                     if x_list[i, j] < 3 and x_list[i, j] > 2:
                         try:
                             new_x_val = x_list[i+2, j] + ((y_lower(x_list[i, j-1]) - y_lower(x_list[i, j+1]))/(x_list[i,j-1] - x_list[i, j+1])) * delta_xi * x_r 
@@ -450,7 +452,7 @@ def main_test():
             plt.plot(np.arange(0,len(residuals)), residuals); plt.yscale('log'); plt.title('residuals')
             plt.xlabel('Full iteration count'); plt.ylabel('Average cell residual magnitude'); plt.show()
 
-def main_full():
+def naca_attempt():
     # full run sequence 
     # avoid previously ran test cases
     # save results to files
@@ -459,8 +461,8 @@ def main_full():
     estimate_iterations = lambda dim: int(2500*np.sqrt(dim[0]*dim[1]) + 15*dim[0]*dim[1])
 
     # generate mesh
-    core_dimensions = [(35,175), (40,200)] # core mesh shapes
-    machs = [0.3, 0.5, 0.7]
+    core_dimensions = [(20,100)] # core mesh shapes
+    machs = [0.5]
     for c_dim in core_dimensions:
 
         # mesh file name
@@ -474,7 +476,7 @@ def main_full():
             my_mesh.generate() # generate the mesh
             my_mesh.ghostify() # saved mesh must be ghostified.
             my_mesh.save(mesh_fname)
-            # my_mesh.plot() 
+            my_mesh.plot() 
 
         # my_mesh.plot() # 
 
@@ -484,12 +486,18 @@ def main_full():
             results_fname = f'results_sh={c_dim[0]}x{c_dim[1]} M={mach}.csv'
  
             # avoid previous test case:
+            # run(mesh_core_dimensions=c_dim,
+            #     mach=mach,
+            #     results_fname=results_fname,
+            #     mesh_fname=mesh_fname,
+            #     max_iterations=estimate_iterations(c_dim)) 
+        
             run(mesh_core_dimensions=c_dim,
                 mach=mach,
                 results_fname=results_fname,
                 mesh_fname=mesh_fname,
-                max_iterations=estimate_iterations(c_dim)) 
-        
+                max_iterations=300000) 
+
             plot_results_pv(mesh_core_dimensions=c_dim, mesh_fname=mesh_fname, results_fname=results_fname, verbose=False)
             residuals = pd.read_csv('residuals.csv')['residuals'].to_numpy()
             plt.plot(np.arange(0,len(residuals)), residuals); plt.yscale('log'); plt.title('residuals')
@@ -498,5 +506,4 @@ def main_full():
 
 
 if __name__ == "__main__":
-    main_full()
-    main_test()
+    naca_attempt()
